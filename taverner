@@ -20,14 +20,11 @@ cachedir="$prefix"/share/cache
 coverdir="$prefix"/share/covers
 
 # Check that the directories actually exist before attempting anything
-chk_exists_dir "$prefix"
-chk_exists_dir "$bindir"
-chk_exists_dir "$coverdir"
-chk_exists_dir "$cachedir"
+chk_dirs_exist "$prefix" "$bindir" "$coverdir" "$cachedir"
 
-dmenu_opts=(-i -w -ia top-gapless -is 200x250 -fn 'Dina Bold 8' -p 'Launch'
-            -nf '#585d63' -nb '#1c1811'
-            -sf '#91cfc6' -sb '#211f1b')
+dmenu_opts=(-i -w -ia top-gapless -is 200x250 -fn 'Inconsolatazi4' -p 'Launch'
+            -nf '#a7a7a7' -nb '#1e1e1e'
+            -sf '#9b859d' -sb '#262626')
 
 # Generates a list of games along with associated cover and launcher script
 # paths
@@ -89,7 +86,7 @@ chk_cache() {
     # Check if the number of binaries don't match what we have cached, then
     # (re)generate the cache.db and num.db
     if ((ncached != nbins)); then
-        debug "${FUNCNAME[0]}: nbins($nbins) > ncached($ncached) should be true"
+        #debug "${FUNCNAME[0]}: nbins($nbins) > ncached($ncached) should be true"
         gen_list > "$cachedir"/cache.db
     fi
 
