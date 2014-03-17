@@ -34,19 +34,28 @@ What *&* How
 Briefly, a typical session may look like this::
 
     % barkeep -h
-    Usage: barkeep -n <name> -t <template> [-r <name>] [-c <cover>] [-e <editor>] [-l]
+    Usage: barkeep -n <name> -t <template> [-c <cover>] [-e <editor>] [-l]
+           barkeep -r [name [name [...]]]
 
         Operations:
             -l      List all available templates
-            -r      Remove game, cover and reset database
             -n      Name of the new game launcher script
             -t      Select a template to base the new entry on
             -c      Path to a cover image (note: this is destructive)
             -e      Prefered editor, uses $EDITOR if not set
 
+        Single Operations:
+            -r      Remove launcher(s), cover(s) and reset database
+                    If no argument given, attempt to remove all launchers
+
         Examples:
+            # Creates an entry using the psx template called wipeout_3 using emacs
+            # as the editor
             barkeep -e emacs -n wipeout_3 -t psx -c ~/wipeout.png
-            barkeep -r wipeout_3
+            
+            # Removes both wipeout_3 and crash_bandicoot launchers along with any
+            # cover images if found and resets the cache
+            barkeep -r wipeout_3 crash_bandicoot
 
 ::
 
