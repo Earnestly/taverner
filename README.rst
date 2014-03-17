@@ -1,5 +1,7 @@
 Taverner
 ========
+.. image:: https://raw.github.com/Earnestly/taverner/master/screenshot.png
+
 Taverner is a small collection of shell scripts *(read: 3)* designed to
 generate and maintain a bunch of game launchers (or anything else really).  
 It uses a modified dmenu_ to create a list of items along with a nice cover
