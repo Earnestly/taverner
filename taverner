@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+# taverner
+# Generate a dmenu for games on various platforms with associated cover images
+# and launch them based on custom shell scripts tailored for their needs
+
+# Includes
+# get_abs_dir, in_array, exists_dir, confirm, err, warn, debug, msg
+if ! source "$HOME"/.local/lib/libtavern; then
+    printf >&2 '%s: Failed to source\n' "$HOME"/.local/lib/libtavern
+    exit 1
+fi
+
+# Options
+shopt -s nullglob
+
+# Globals
+prefix="$HOME"/games
+bindir="$prefix"/bin
+cachedir="$prefix"/share/cache
+coverdir="$prefix"/share/covers
+
+# Check that the directories actually exist before attempting anything
+chk_exists_dir "$prefix"
+chk_exists_dir "$bindir"
+chk_exists_dir "$coverdir"
+chk_exists_dir "$cachedir"
+
+dmenu_opts=(-i -w -ia top-gapless -is 200x250 -fn 'Dina Bold 8' -p 'Launch'
+            -nf '#585d63' -nb '#1c1811'
+            -sf '#91cfc6' -sb '#211f1b')
+
+# Generates a list of games along with associated cover and launcher script
+# paths
+gen_list() {
+    local bindir="${1:-$prefix/bin}"
+    local coverdir="${2:-$prefix/share/covers}"
+    local f title
+
+    for f in "$bindir"/*; do
+        # Get the title from the script
+        while read -r title; do
+            # Look for '# Title:' and set the title based on what comes after
+            if [[ "$title" =~ '# Title: '?(.*) ]]; then
+                title="${BASH_REMATCH[1]}"
+                # Stop reading the file
+                break
+            fi
+        done < "$f"
+
+        # Check if the title exists else use the name of the script instead
+        if [[ -n "$title" ]]; then
+            printf '%s\n' "$title"
+        else
+            printf '%s\n' "${f##*/}"
+        fi
+
+        # Path to script which starts the program
+        printf '%s\n' "$f"
+
+        # Path to cover image with the same name as the script suffixed with
+        # .cover
+        if [[ -e "$coverdir"/"${f##*/}".cover ]]; then
+            printf "%s\n" "$coverdir"/"${f##*/}".cover
+        else
+            printf "%s\n" "$coverdir"/placeholder.cover
+        fi
+    done
+}
+
+# (Re)generates the cache if new scripts are added otherwise does nothing
+# XXX This won't regenerate the cache if a title is changed in one of the
+#     launcher scripts, manual deletion of the cache is necessary
+chk_cache() {
+    local bindir="${1:-$prefix/bin}"
+    local cachedir="${2:-$prefix/share/cache}"
+    local nbins ncached
+
+    # Get the number of files in $prefix/bin/ for comparison
+    nbins=("$bindir"/*); nbins="${#nbins[@]}"
+
+    # If the cache.db doesn't exist then neither should num.db
+    # Then make sure the num.db exists before trying to read it
+    if [[ ! -e "$cachedir"/cache.db ]]; then
+        rm -- "$cachedir"/num.db &> /dev/null
+    elif [[ -e "$cachedir"/num.db ]]; then
+        read -r ncached < "$cachedir"/num.db
+    fi
+
+    # Check if the number of binaries don't match what we have cached, then
+    # (re)generate the cache.db and num.db
+    if ((ncached != nbins)); then
+        #printf '[DBG] In %s: nbins=%d, ncache=%d\n' "${FUNCNAME[0]}" "$nbins" "$ncache"
+        gen_list > "$cachedir"/cache.db
+    fi
+
+    # Make sure the cache was actually created before attmpting to use it    
+    if [[ -e "$cachedir"/cache.db ]]; then
+        printf '%s\n' "$nbins" > "$cachedir"/num.db
+    else 
+        err "$cachedir/cache.db couldn't be generated"
+        msg "This usually means we couldn't find any games in $bindir"
+        exit 1
+    fi
+}
+
+# Check the cache before continuing
+# XXX There's not much reason to make this a function simply to run it once, but
+#     it lets me use more local variables
+chk_cache
+
+# Parse the list into two arrays.  We keep a consistent key so we can access
+# the correct corresonding information for both lookups
+declare -A titles
+declare -A covers
+
+while {
+    read -r title
+    read -r bin
+    read -r cover
+} do
+    titles["$title"]="$bin"
+    covers["$title"]="$cover"
+done < "$cachedir"/cache.db
+
+# Print the two arrays in a compliant manner for dmenu to consume before
+# executing the results
+if sel=$(
+    for k in "${!titles[@]}"; do
+        printf "IMG:%s\t%s\n" "${covers[$k]}" "$k"
+    done | sort | dmenu "${dmenu_opts[@]}"
+); then
+    command "${titles[$sel]}"
+else
+    exit 0
+fi

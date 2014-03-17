@@ -1,0 +1,251 @@
+#!/usr/bin/env bash
+# barkeep
+# Creates a game entry based on a template for use with `taverner`
+
+# Includes
+# get_abs_dir, in_array, chk_exists_dir, confirm, err, warn, debug, msg
+if ! source "$HOME"/.local/lib/libtavern; then
+    printf >&2 '%s: Failed to source\n' "$HOME"/.local/lib/libtavern
+    exit 1
+fi
+
+# Options
+shopt -s nullglob
+
+# Globals
+prefix="$HOME"/games
+bindir="$prefix"/bin
+cachedir="$prefix"/share/cache
+coverdir="$prefix"/share/covers
+templatedir="$prefix"/share/templates
+
+# Check that the directories actually exist before attempting anything
+chk_exists_dir "$prefix"
+chk_exists_dir "$bindir"
+chk_exists_dir "$coverdir"
+chk_exists_dir "$cachedir"
+chk_exists_dir "$templatedir"
+
+# Functions and helpers
+usage() {
+    cat <<EOF
+Usage: barkeep -n <name> -t <template> [-r <name>] [-c <cover>] [-e <editor>] [-l]
+
+    Operations:
+        -l      List all available templates
+        -r      Remove game, cover and reset database
+        -n      Name of the new game launcher script
+        -t      Select a template to base the new entry on
+        -c      Path to a cover image (note: this is destructive)
+        -e      Prefered editor, uses \$EDITOR if not set
+
+    Examples:
+        barkeep -e emacs -n wipeout_3 -t psx -c ~/wipeout.png
+        barkeep -r wipeout_3
+
+EOF
+}
+
+chk_template() {
+    local name="$1"
+    local t list
+    
+    for t in "$templatedir"/*; do
+        list+=("${t##*/}")
+    done
+
+    if [[ "$name" == list && -n "${t[@]}" ]]; then
+        printf '   %s\n' "${list[@]}"
+        exit 0
+    elif ! in_array "$name" "${list[@]}"; then
+        err "$template: No such template"
+        exit 1
+    fi
+
+    # Make sure the selected template actually is available
+}
+
+resize_cover() {
+    local image="$1"
+
+    if [[ -e "$image" ]]; then
+        # I assume this never fails atm
+        command convert "$image" -resize 368x527\! "$image"
+    fi
+}
+
+
+confirm() {
+    local msg="$1"
+    local -l reply
+
+    read -p "$msg [Y/n] " reply
+
+    # If the reply is empty, assume Y
+    if [[ -z "$reply" || "$reply" = y?(es) ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+rm_game() {
+    local name="$1"
+    local coverimg="$coverdir"/"${name##*/}".cover
+
+    if [[ ! -e "$bindir"/"${name##*/}" ]]; then
+        err "$bindir/${name##*/}: No such file"
+        exit 1
+    fi
+
+    # Confirm before removing the bin and the cache
+    if confirm "Remove $bindir/${name##*/}?"; then
+        rm -vf -- "$bindir"/"${name##*/}"
+        rm -vf -- "$cachedir"/cache.db
+
+        # Make sure a cover image exists before trying to remove it
+        if [[ -e "$coverimg" ]]; then
+            rm -vf -- "$coverdir"/"${name##*/}".cover
+        fi
+    fi
+}
+
+mk_template() {
+    local name="$1"
+    local template="$2"
+
+    # Check the template and make sure it doesn't already exist and is available
+    chk_template "$template"
+
+    if [[ ! -e "$bindir"/"$name" ]]; then
+        cp -v -- "$templatedir"/"$template" "$bindir"/"$name"
+        chmod -c +x -- "$bindir"/"$name"
+    else
+        err "$bindir/$name: Already exists"
+        exit 1
+    fi
+}
+
+mk_cover() {
+    local name="$1"
+    local cover="$2"
+    local coverpath
+   
+    # Get the absolute path to the cover image 
+    coverpath="$(get_abs_dir "$cover")"
+
+    if [[ ! -e "$coverpath" ]]; then
+        warn "$coverpath: No such file, using $coverdir/placeholder.cover"
+    fi
+
+    if [[ -e "$coverdir"/"$name" ]]; then
+        warn "$coverdir/$name: Already exists, using $coverdir/$name.cover"
+    elif [[ -e "$coverpath" ]]; then
+        mv -v -- "$coverpath" "$coverdir"/"$name".cover
+        resize_cover "$coverdir"/"$name".cover
+    fi
+}
+
+# We need at least one argument, if none are provided display usage information
+# and exit
+if (($# == 0)); then
+    err "At least one argument is required"
+    usage
+    exit 1
+fi
+
+# I will handle the errors manually
+while getopts ':hlt:d:c:n:r:e:' argv; do
+    case "$argv" in
+        n)
+            name="$OPTARG"
+
+            # The following is a hack to work around multiple arguments given to 
+            # a single option, # this will use current OPTIND as the index to 
+            # $@ plus one argument, then if it doesn't being with a '-', 
+            # increment it, simply skipping extra non-arguments until I find a 
+            # real option.  
+            
+            # This allows me to restrict an option to only accept a single 
+            # argument.
+            [[ "${@:OPTIND:1}" != -* ]] && ((++OPTIND))
+            ;;
+        t)
+            template="$OPTARG"
+            [[ "${@:OPTIND:1}" != -* ]] && ((++OPTIND))
+            ;;
+        e)
+            editor="$OPTARG"
+            [[ "${@:OPTIND:1}" != -* ]] && ((++OPTIND))
+            ;;
+        r)
+            remove="$OPTARG"
+            [[ "${@:OPTIND:1}" != -* ]] && ((++OPTIND))
+            ;;
+        c)
+            cover="$OPTARG"
+            [[ "${@:OPTIND:1}" != -* ]] && ((++OPTIND))
+            ;;
+        l)
+            chk_template list
+            ;;
+        h)
+            usage
+            exit 0
+            ;;
+        :)
+            err "Option -$OPTARG requires an argument"
+            usage
+            exit 1
+            ;;
+        ?)
+            err "Invalid option: -$OPTARG"
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+# Process removal and exit before attempting anything else
+if [[ -n "$remove" ]]; then
+    rm_game "$remove"
+    exit 0
+fi
+
+# Make sure a name is supplied
+if [[ -z "$name" ]]; then
+    err "A NAME is required"
+    exit 1
+fi
+
+# Set the editor if none was specified
+if [[ -z "$editor" ]]; then
+    EDITOR="${VISUAL:-$EDITOR}"
+else
+    EDITOR="$editor"
+fi
+
+# Exit before making a template as an editor is required, otherwise we could
+# just make a note of this and not run an editor after creation
+if ! hash "$EDITOR" &> /dev/null; then
+    err "$EDITOR: Does not exist"
+    exit 1
+fi
+
+# Make sure a template was chosen
+if [[ -n "$template" ]]; then
+    mk_template "$name" "$template"
+else
+    err "No template selected"
+    exit 1
+fi
+
+if [[ -n "$cover" ]]; then
+    mk_cover "$name" "$cover"
+else
+    warn "No image selected, using $coverdir/placeholder.cover"
+fi
+
+# Let the user edit the template, I'm not going to try run a CPP over this or any
+# other kind of templating engine as it just increases complexity, maybe...
+command "$EDITOR" "$bindir"/"$name"
