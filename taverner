@@ -89,7 +89,7 @@ chk_cache() {
     # Check if the number of binaries don't match what we have cached, then
     # (re)generate the cache.db and num.db
     if ((ncached != nbins)); then
-        #printf '[DBG] In %s: nbins=%d, ncache=%d\n' "${FUNCNAME[0]}" "$nbins" "$ncache"
+        debug "${FUNCNAME[0]}: nbins($nbins) > ncached($ncached) should be true"
         gen_list > "$cachedir"/cache.db
     fi
 
