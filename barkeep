@@ -19,12 +19,10 @@ cachedir="$prefix"/share/cache
 coverdir="$prefix"/share/covers
 templatedir="$prefix"/share/templates
 
+TMPDIR=/tmp # Used for internet incoming images
+
 # Check that the directories actually exist before attempting anything
-chk_exists_dir "$prefix"
-chk_exists_dir "$bindir"
-chk_exists_dir "$coverdir"
-chk_exists_dir "$cachedir"
-chk_exists_dir "$templatedir"
+chk_dirs_exist "$prefix" "$bindir" "$coverdir" "$cachedir" "$templatedir" "$TMPDIR"
 
 # Functions and helpers
 usage() {
@@ -54,15 +52,19 @@ chk_template() {
         list+=("${t##*/}")
     done
 
+    # Generate a list for `barkeep -l`
     if [[ "$name" == list && -n "${t[@]}" ]]; then
         printf '   %s\n' "${list[@]}"
         exit 0
+    # If we found no templates at all
+    elif [[ -z "${list[@]}" ]]; then
+        err "No templates available"
+        exit 1
+    # Then make sure the chosen template exists itself
     elif ! in_array "$name" "${list[@]}"; then
         err "$template: No such template"
         exit 1
     fi
-
-    # Make sure the selected template actually is available
 }
 
 resize_cover() {
@@ -73,22 +75,7 @@ resize_cover() {
     fi
 }
 
-
-confirm() {
-    local msg="$1"
-    local -l reply
-
-    read -p "$msg [Y/n] " reply
-
-    # If the reply is empty, assume Y
-    if [[ -z "$reply" || "$reply" = y?(es) ]]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-rm_game() {
+rm_launcher() {
     local name="$1"
     local coverimg="$coverdir"/"${name##*/}".cover
 
@@ -129,12 +116,21 @@ mk_cover() {
     local name="$1"
     local cover="$2"
     local coverpath
-   
-    # Get the absolute path to the cover image 
-    coverpath="$(get_abs_dir "$cover")"
+ 
+    # Support http, https and ftp 
+    if [[ "$cover" =~ [ht\|f]tps? ]]; then
+        if curl -so "$TMPDIR"/barkeep-image "$cover"; then
+            coverpath="$TMPDIR"/barkeep-image
+        else
+            warn "Failed to fetch $cover"
+        fi
+    else
+        # Get the absolute path to the cover image 
+        coverpath="$(get_abs_dir "$cover")"
+    fi
 
     if [[ ! -e "$coverpath" ]]; then
-        warn "$coverpath: No such file, using $coverdir/placeholder.cover"
+        warn "No cover image available, using $coverdir/placeholder.cover"
     fi
 
     if [[ -e "$coverdir"/"$name" ]]; then
@@ -210,7 +206,7 @@ done
 
 # Process removal and exit before attempting anything else
 if [[ -n "$remove" ]]; then
-    rm_game "$remove"
+    rm_launcher "$remove"
     exit 0
 fi
 
