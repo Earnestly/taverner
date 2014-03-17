@@ -85,8 +85,8 @@ After editing the template all that remains is to run ``taverner``.
 Now for a bit more detail
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 ``taverner`` expects a certain hierarchical directory structure which closely
-mimics what we're used to on Linux.  If you want to alter this, simply change
-the prefix in the file and in ``barkeep``
+mimics what we're used to on \*nix.  If you want to alter this, simply change
+the prefix in both ``taverner`` and ``barkeep``
     
 .. code-block:: sh
 
@@ -108,8 +108,7 @@ The structure itself by default uses the following with the prefix set to
     I use this ``data`` directory to dump all the games and game data, but there
     is no requirement on it and its not used by ``taverner``.
 
-Each of the paths can also be altered via additional variables which as desired
-as well
+Each of the paths can also be altered via additional variables as desired too:
 
 .. code-block:: sh
 
