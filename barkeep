@@ -69,7 +69,6 @@ resize_cover() {
     local image="$1"
 
     if [[ -e "$image" ]]; then
-        # I assume this never fails atm
         command convert "$image" -resize 368x527\! "$image"
     fi
 }
@@ -142,7 +141,10 @@ mk_cover() {
         warn "$coverdir/$name: Already exists, using $coverdir/$name.cover"
     elif [[ -e "$coverpath" ]]; then
         mv -v -- "$coverpath" "$coverdir"/"$name".cover
-        resize_cover "$coverdir"/"$name".cover
+        if ! resize_cover "$coverdir"/"$name".cover; then
+            warn "Failed to resize image, falling back to $coverdir/placeholder.cover"
+            rm -v -- "$coverdir"/"$name".cover
+        fi
     fi
 }
 
