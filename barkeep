@@ -27,19 +27,28 @@ chk_dirs_exist "$prefix" "$bindir" "$coverdir" "$cachedir" "$templatedir" "$TMPD
 # Functions and helpers
 usage() {
     cat <<EOF
-Usage: barkeep -n <name> -t <template> [-r <name>] [-c <cover>] [-e <editor>] [-l]
+Usage: barkeep -n <name> -t <template> [-c <cover>] [-e <editor>] [-l]
+       barkeep -r [name [name [...]]]
 
     Operations:
         -l      List all available templates
-        -r      Remove game, cover and reset database
         -n      Name of the new game launcher script
         -t      Select a template to base the new entry on
         -c      Path to a cover image (note: this is destructive)
         -e      Prefered editor, uses \$EDITOR if not set
 
+    Single Operations:
+        -r      Remove launcher(s), cover(s) and reset database
+                If no argument given, attempt to remove all launchers
+
     Examples:
+        # Creates an entry using the psx template called wipeout_3 using emacs
+        # as the editor
         barkeep -e emacs -n wipeout_3 -t psx -c ~/wipeout.png
-        barkeep -r wipeout_3
+        
+        # Removes both wipeout_3 and crash_bandicoot launchers along with any
+        # cover images if found and resets the cache
+        barkeep -r wipeout_3 crash_bandicoot
 
 EOF
 }
@@ -76,24 +85,34 @@ resize_cover() {
 }
 
 rm_launcher() {
-    local name="$1"
-    local coverimg="$coverdir"/"${name##*/}".cover
+    local names
+    local n coverimg
 
-    if [[ ! -e "$bindir"/"${name##*/}" ]]; then
-        err "$bindir/${name##*/}: No such file"
-        exit 1
+    if [[ -n "$@" ]]; then
+        names=("$@")
+    else
+        names=("$bindir"/*)
     fi
 
-    # Confirm before removing the bin and the cache
-    if confirm "Remove $bindir/${name##*/}?"; then
-        rm -vf -- "$bindir"/"${name##*/}"
-        rm -vf -- "$cachedir"/cache.db
+    for n in "${names[@]}"; do
+        coverimg="$coverdir"/"${n##*/}".cover
 
-        # Make sure a cover image exists before trying to remove it
-        if [[ -e "$coverimg" ]]; then
-            rm -vf -- "$coverdir"/"${name##*/}".cover
+        # If the file doesn't actually exist, skip it instead of failing
+        if [[ ! -e "$bindir"/"${n##*/}" ]]; then
+            warn "$bindir/${n##*/}: No such file, skipping"
+        else
+            # Confirm before removing the bin and the cache
+            if confirm "Remove $bindir/${n##*/}?"; then
+                rm -vf -- "$bindir"/"${n##*/}"
+                rm -vf -- "$cachedir"/cache.db
+
+                # Make sure a cover image exists before trying to remove it
+                if [[ -e "$coverimg" ]]; then
+                    rm -vf -- "$coverdir"/"${n##*/}".cover
+                fi
+            fi
         fi
-    fi
+    done
 }
 
 mk_template() {
@@ -153,7 +172,7 @@ if (($# == 0)); then
 fi
 
 # I will handle the errors manually
-while getopts ':hlt:d:c:n:r:e:' argv; do
+while getopts ':hlt:d:c:n:re:' argv; do
     case "$argv" in
         n)
             name="$OPTARG"
@@ -176,13 +195,13 @@ while getopts ':hlt:d:c:n:r:e:' argv; do
             editor="$OPTARG"
             [[ "${@:OPTIND:1}" != -* ]] && ((++OPTIND))
             ;;
-        r)
-            remove="$OPTARG"
-            [[ "${@:OPTIND:1}" != -* ]] && ((++OPTIND))
-            ;;
         c)
             cover="$OPTARG"
             [[ "${@:OPTIND:1}" != -* ]] && ((++OPTIND))
+            ;;
+        r)
+            remove=1
+            shift
             ;;
         l)
             chk_template list
@@ -204,10 +223,14 @@ while getopts ':hlt:d:c:n:r:e:' argv; do
     esac
 done
 
-# Process removal and exit before attempting anything else
-if [[ -n "$remove" ]]; then
-    rm_launcher "$remove"
+# Process removal before continuing making sure that both of the mandatory
+# arguments aren't set before attempting it
+if ((remove)) && [[ -z "$name" && -z "$template" ]]; then
+    rm_launcher "$@"
     exit 0
+else
+    warn "Sigh, are you attempting to remove things while creating new entires?"
+    msg "I suppose it can't be helped, this script isn't very smart... :/"
 fi
 
 # Make sure a name is supplied
