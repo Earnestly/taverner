@@ -141,9 +141,9 @@ Make sure you set the desired location for both ``taverner`` and ``barkeep``
 Why
 ---
 I wanted to turn an old machine into a game box that could play various emulated
-games on the SNES, PSX, PSP and some older ones via WINE.  Many existing
-solutions were quite sophisticated, beautiful and complex graphical frontends,
-usually existing to serve a specific set of emulators.
+games on the SNES, PSX, PSP and some older ones via WINE while unifying the UI.
+Many existing solutions were quite sophisticated, beautiful and complex
+graphical frontends, usually existing to serve a specific set of emulators.
 
 Since the machine I was planning to use is quite limited in terms of hardware I
 wanted something simple (and not very clever) which did as little as possible
