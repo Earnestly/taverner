@@ -172,6 +172,10 @@ fi
 # I will handle the errors manually
 while getopts ':hlt:d:c:n:re:' argv; do
     case "$argv" in
+        r)
+            remove=1
+            shift
+            ;;
         n)
             name="$OPTARG"
 
@@ -196,10 +200,6 @@ while getopts ':hlt:d:c:n:re:' argv; do
             cover="$OPTARG"
             [[ "${@:OPTIND:1}" != -* ]] && ((++OPTIND))
             ;;
-        r)
-            remove=1
-            shift
-            ;;
         l)
             chk_template list
             ;;
@@ -222,12 +222,10 @@ done
 
 # Process removal before continuing making sure that both of the mandatory
 # arguments aren't set before attempting it
-if ((remove)) && [[ -z "$name" && -z "$template" ]]; then
+if [[ -n "$remove" && -z "$name" && -z "$template" ]]; then
+    debug "Remove ($remove) should be 0 if -r isn't used"
     rm_launcher "$@"
     exit 0
-else
-    warn "Sigh, are you attempting to remove things while creating new entires?"
-    msg "I suppose it can't be helped, this script isn't very smart... :/"
 fi
 
 # Make sure a name is supplied
