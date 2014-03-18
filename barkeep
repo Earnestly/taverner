@@ -18,11 +18,13 @@ bindir="$prefix"/bin
 cachedir="$prefix"/share/cache
 coverdir="$prefix"/share/covers
 templatedir="$prefix"/share/templates
+placeholder="$prefix"/share/covers/placeholder.cover
 
 TMPDIR=/tmp # Used for internet incoming images
 
 # Check that the directories actually exist before attempting anything
 chk_dirs_exist "$prefix" "$bindir" "$coverdir" "$cachedir" "$templatedir" "$TMPDIR"
+
 
 # Functions and helpers
 usage() {
@@ -133,10 +135,17 @@ mk_cover() {
     local name="$1"
     local cover="$2"
     local coverpath
- 
+
+    # Lets check that the placeholder actually exists here so warnings don't
+    # appear when removing titles that have nothing to do with the placeholder
+    if [[ ! -e "$placeholder" ]]; then
+        warn "$placeholder: Not found, using nothing instead"
+        placeholder="nothing"
+    fi
+
     # Support http, https and ftp 
     if [[ "$cover" =~ [ht\|f]tps? ]]; then
-        if curl -so "$TMPDIR"/barkeep-image "$cover"; then
+        if curl -o "$TMPDIR"/barkeep-image "$cover"; then
             coverpath="$TMPDIR"/barkeep-image
         else
             warn "Failed to fetch $cover"
@@ -147,7 +156,7 @@ mk_cover() {
     fi
 
     if [[ ! -e "$coverpath" ]]; then
-        warn "No cover image available, using $coverdir/placeholder.cover"
+        warn "No cover image available, using $placeholder"
     fi
 
     if [[ -e "$coverdir"/"$name" ]]; then
@@ -155,7 +164,7 @@ mk_cover() {
     elif [[ -e "$coverpath" ]]; then
         mv -v -- "$coverpath" "$coverdir"/"$name".cover
         if ! resize_cover "$coverdir"/"$name".cover; then
-            warn "Failed to resize image, falling back to $coverdir/placeholder.cover"
+            warn "Failed to resize image, falling back to $placeholder"
             rm -vf -- "$coverdir"/"$name".cover
         fi
     fi
@@ -172,10 +181,6 @@ fi
 # I will handle the errors manually
 while getopts ':hlt:d:c:n:re:' argv; do
     case "$argv" in
-        r)
-            remove=1
-            shift
-            ;;
         n)
             name="$OPTARG"
 
@@ -200,6 +205,10 @@ while getopts ':hlt:d:c:n:re:' argv; do
             cover="$OPTARG"
             [[ "${@:OPTIND:1}" != -* ]] && ((++OPTIND))
             ;;
+        r)
+            remove=t
+            shift
+            ;;
         l)
             chk_template list
             ;;
@@ -222,8 +231,7 @@ done
 
 # Process removal before continuing making sure that both of the mandatory
 # arguments aren't set before attempting it
-if [[ -n "$remove" && -z "$name" && -z "$template" ]]; then
-    debug "Remove ($remove) should be 0 if -r isn't used"
+if [[ "$remove" == t && -z "$name" && -z "$template" ]]; then
     rm_launcher "$@"
     exit 0
 fi
@@ -259,7 +267,7 @@ fi
 if [[ -n "$cover" ]]; then
     mk_cover "$name" "$cover"
 else
-    warn "No image selected, using $coverdir/placeholder.cover"
+    warn "No image selected, using $placeholder"
 fi
 
 # Let the user edit the template, I'm not going to try run a CPP over this or any
