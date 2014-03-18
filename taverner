@@ -45,6 +45,10 @@ gen_list() {
         done < "$f"
 
         # Check if the title exists else use the name of the script instead
+        # XXX Currently I don't check for duplicate titles at all, and I may
+        #     never do so in the current code.  What this means is that dmenu
+        #     will only ever show one and I have no way to tell which one that
+        #     will be.
         if [[ -n "$title" ]]; then
             printf '%s\n' "$title"
         else
