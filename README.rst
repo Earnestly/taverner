@@ -41,7 +41,7 @@ Briefly, a typical session may look like this::
             -l      List all available templates
             -n      Name of the new game launcher script
             -t      Select a template to base the new entry on
-            -c      Path to a cover image (note: this is destructive)
+            -c      Path or url to a cover image (note: this is destructive)
             -e      Prefered editor, uses $EDITOR if not set
 
         Single Operations:
