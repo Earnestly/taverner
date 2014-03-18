@@ -5,7 +5,7 @@
 # Includes
 # get_abs_dir, in_array, chk_exists_dir, confirm, err, warn, debug, msg
 if ! source "$HOME"/.local/lib/libtavern; then
-    printf >&2 '%s: Failed to source\n' "$HOME"/.local/lib/libtavern
+    printf >&2 '[ERR] Failed to source %s\n' "$HOME"/.local/lib/libtavern
     exit 1
 fi
 
@@ -91,6 +91,7 @@ rm_launcher() {
     if [[ -n "$@" ]]; then
         names=("$@")
     else
+        # If we get no arguments, just add everything we can find in the bindir
         names=("$bindir"/*)
     fi
 
