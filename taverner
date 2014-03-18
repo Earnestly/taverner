@@ -75,6 +75,12 @@ chk_cache() {
     # Get the number of files in $prefix/bin/ for comparison
     nbins=("$bindir"/*); nbins="${#nbins[@]}"
 
+    # Make sure we have something to generate before attempting to generate
+    if ((nbins == 0)); then
+        err "Couldn't generate list as no launchers exist in $bindir"
+        exit 1
+    fi
+
     # If the cache.db doesn't exist then neither should num.db
     # Then make sure the num.db exists before trying to read it
     if [[ ! -e "$cachedir"/cache.db ]]; then
@@ -88,15 +94,7 @@ chk_cache() {
     if ((ncached != nbins)); then
         #debug "${FUNCNAME[0]}: nbins($nbins) > ncached($ncached) should be true"
         gen_list > "$cachedir"/cache.db
-    fi
-
-    # Make sure the cache was actually created before attmpting to use it    
-    if [[ -e "$cachedir"/cache.db ]]; then
         printf '%s\n' "$nbins" > "$cachedir"/num.db
-    else 
-        err "$cachedir/cache.db couldn't be generated"
-        msg "This usually means we couldn't find any launchers in $bindir"
-        exit 1
     fi
 }
 
