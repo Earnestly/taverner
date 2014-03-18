@@ -27,7 +27,8 @@ export WINEPREFIX="$prefix"
 
 # Get the current resolution if not defined
 if [[ -z "$resolution" ]]; then
-    resolution=$(xrandr | awk '/\*/ { print $1}')
+    # Exit after the first match
+    resolution=$(xrandr | awk '/ connected/ { print $3; exit }')
 fi
 
 # Build the command based on above variables
