@@ -100,19 +100,16 @@ rm_launcher() {
         # If the file doesn't actually exist, skip it instead of failing
         if [[ ! -e "$bindir"/"${n##*/}" ]]; then
             warn "$bindir/${n##*/}: No such file, skipping"
-        else
-            # Confirm before removing the bin and the cache
-            if confirm "Remove $bindir/${n##*/}?"; then
-                rm -vf -- "$bindir"/"${n##*/}"
-                rm -vf -- "$cachedir"/cache.db
+        elif confirm "Remove $bindir/${n##*/}?"; then
+            rm -vf -- "$bindir"/"${n##*/}"
+            rm -vf -- "$cachedir"/cache.db
 
-                # Make sure a cover image exists before trying to remove it
-                if [[ -e "$coverimg" ]]; then
-                    rm -vf -- "$coverdir"/"${n##*/}".cover
-                fi # Ouch
-            fi # Ooph
-        fi # Pow
-    done # Ow! Score: 5 total levels of indentation, you lose
+            # Make sure a cover image exists before trying to remove it
+            if [[ -e "$coverimg" ]]; then
+                rm -vf -- "$coverdir"/"${n##*/}".cover
+            fi
+        fi
+    done
 }
 
 mk_template() {
