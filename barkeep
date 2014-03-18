@@ -178,12 +178,11 @@ while getopts ':hlt:d:c:n:re:' argv; do
             name="$OPTARG"
 
             # The following is a hack to work around multiple arguments given to 
-            # a single option, # this will use current OPTIND as the index to 
-            # $@ plus one argument, then if it doesn't being with a '-', 
-            # increment it, simply skipping extra non-arguments until I find a 
-            # real option.  
+            # a single option, this will use current OPTIND as the index to $@
+            # plus one argument, then if it doesn't begin with a '-', increment
+            # it, skipping extra non-arguments until we fine one.
             
-            # This allows me to restrict an option to only accept a single 
+            # This allows us to restrict an option to only accept a single 
             # argument.
             [[ "${@:OPTIND:1}" != -* ]] && ((++OPTIND))
             ;;
