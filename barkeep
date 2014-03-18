@@ -109,10 +109,10 @@ rm_launcher() {
                 # Make sure a cover image exists before trying to remove it
                 if [[ -e "$coverimg" ]]; then
                     rm -vf -- "$coverdir"/"${n##*/}".cover
-                fi
-            fi
-        fi
-    done
+                fi # Ouch
+            fi # Ooph
+        fi # Pow
+    done # Ow! Score: 5 total levels of indentation, you lose
 }
 
 mk_template() {
