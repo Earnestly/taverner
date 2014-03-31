@@ -2,8 +2,7 @@
 # barkeep
 # Creates a game entry based on a template for use with `taverner`
 
-# Includes
-# get_abs_dir, in_array, chk_exists_dir, confirm, err, warn, debug, msg
+# Includes get_abs_dir, in_array, chk_exists_dir, confirm, err, warn, debug, msg
 if ! source "$HOME"/.local/lib/libtavern; then
     printf >&2 '[ERR] Failed to source %s\n' "$HOME"/.local/lib/libtavern
     exit 1
@@ -122,12 +121,12 @@ mk_template() {
     # Check the template and make sure it doesn't already exist and is available
     chk_template "$template"
 
-    if [[ ! -e "$bindir"/"$name" ]]; then
-        cp -v -- "$templatedir"/"$template" "$bindir"/"$name"
-        chmod -c +x -- "$bindir"/"$name"
-    else
+    if [[ -e "$bindir"/"$name" ]]; then
         err "$bindir/$name: Already exists"
         exit 1
+    else
+        cp -v -- "$templatedir"/"$template" "$bindir"/"$name"
+        chmod -c +x -- "$bindir"/"$name"
     fi
 }
 
