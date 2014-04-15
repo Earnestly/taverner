@@ -61,9 +61,9 @@ gen_list() {
         # Path to cover image with the same name as the script suffixed with
         # .cover
         if [[ -e "$coverdir"/"${f##*/}".cover ]]; then
-            printf "%s\n" "$coverdir"/"${f##*/}".cover
+            printf '%s\n' "$coverdir"/"${f##*/}".cover
         else
-            printf "%s\n" "$coverdir"/placeholder.cover
+            printf '%s\n' "$coverdir"/placeholder.cover
         fi
     done
 }
