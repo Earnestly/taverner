@@ -7,7 +7,7 @@
 executable=()
 
 # The prefix is the same as the WINEPREFIX, it gets exported later on
-prefix=""
+prefix="$XDG_DATA_HOME"/wine/prefix
 
 # This example template assume the WINEPREFIX's name and path under C:\ is the 
 # same, if it's not, use an alternative path.
@@ -16,14 +16,15 @@ alt_path=""
 
 # Title and resolution passed to the Virtual Desktop, no one uses wine without
 # them, NO ONE! ಠ_ಠ
-title=""
-resolution=""
+title="No_Spaces_Here"
+resolution="0000x000"
 
 # Export any environment variables, useful in some cases, e.g.
 export __GL_THREADED_OPTIMIZATIONS=1 
-export WINEPREFIX="$prefix"
+
 
 # From here on, most of the rest is just script logic based on the above
+export WINEPREFIX="$prefix"
 
 # Get the current resolution if not defined
 if [[ -z "$resolution" ]]; then
