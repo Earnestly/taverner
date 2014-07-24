@@ -22,7 +22,7 @@ placeholder="$prefix"/share/covers/placeholder.cover
 TMPDIR=/tmp # Used for internet incoming images
 
 # Check that the directories actually exist before attempting anything
-chk_dirs_exist "$prefix" "$bindir" "$coverdir" "$cachedir" "$templatedir" "$TMPDIR"
+dirs_exist "$prefix" "$bindir" "$coverdir" "$cachedir" "$templatedir" "$TMPDIR"
 
 
 # Functions and helpers
@@ -64,7 +64,7 @@ chk_template() {
 
     # Generate a list for `barkeep -l`
     if [[ "$name" == list && -n "${t[@]}" ]]; then
-        printf '   %s\n' "${list[@]}"
+        printf '%03s\n' "${list[@]}"
         exit 0
     # If we found no templates at all
     elif [[ -z "${list[@]}" ]]; then

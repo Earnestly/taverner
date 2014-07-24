@@ -22,7 +22,8 @@ coverdir="$prefix"/share/covers
 # Check that the directories actually exist before attempting anything
 chk_dirs_exist "$prefix" "$bindir" "$coverdir" "$cachedir"
 
-dmenu_opts=(-i -w -ia top-gapless -is 200x250 -fn 'Inconsolatazi4' -p 'Launch'
+dmenu_opts=(-i -w -ia top-gapless -is 200x250 
+            -fn 'Inconsolatazi4' -p 'Launch'
             -nf '#a7a7a7' -nb '#1e1e1e'
             -sf '#9b859d' -sb '#262626')
 

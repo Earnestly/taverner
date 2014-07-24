@@ -73,7 +73,7 @@ confirm() {
     fi
 }
 
-chk_dirs_exist() {
+dirs_exist() {
     local dirs=("$@")
     local d
 

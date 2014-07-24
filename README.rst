@@ -29,8 +29,8 @@ Install
     # Add "$HOME"/games/bin to you path, I've appended it here rather than suffixed
     PATH="$PATH":"$HOME"/games/bin
 
-What *&* How
-------------
+What & How
+----------
 Briefly, a typical session may look like this::
 
     % barkeep -h
