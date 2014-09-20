@@ -21,6 +21,8 @@ A few ideas
 * Use a different language?  I guess this doesn't matter if we're using a git
   architecture as each program is separate
 
+* Remove the cache, it's a lot of extra complexity for almost no gain
+
 Launchers
 ---------
-Shell script? Much more expressive and flexible
+Arbitrary scripts or programs
