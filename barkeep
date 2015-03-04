@@ -2,273 +2,278 @@
 # barkeep
 # Creates a game entry based on a template for use with `taverner`
 
-# Includes get_abs_dir, in_array, chk_exists_dir, confirm, err, warn, debug, msg
-if ! source "$HOME"/.local/lib/libtavern; then
-    printf >&2 '[ERR] Failed to source %s\n' "$HOME"/.local/lib/libtavern
-    exit 1
-fi
-
 # Options
 shopt -s nullglob
 
 # Globals
 prefix="$HOME"/games
-bindir="$prefix"/bin
-cachedir="$prefix"/share/cache
-coverdir="$prefix"/share/covers
-templatedir="$prefix"/share/templates
-placeholder="$prefix"/share/covers/placeholder.cover
+readonly progn=barkeep
+readonly datadir="${XDG_DATA_HOME:-$HOME/.local/share}"
+readonly prefix="$datadir"/taverner
+readonly bindir="$prefix"/bin
+readonly coverdir="$prefix"/covers
+readonly templatedir="$prefix"/templates
 
-TMPDIR=/tmp # Used for internet incoming images
+readonly TMPDIR=/tmp
 
-# Check that the directories actually exist before attempting anything
-dirs_exist "$prefix" "$bindir" "$coverdir" "$cachedir" "$templatedir" "$TMPDIR"
-
-
-# Functions and helpers
-usage() {
+usage_mk() {
     cat <<EOF
-Usage: barkeep -n <name> -t <template> [-c <cover>] [-e <editor>] [-l]
-       barkeep -r [name [name [...]]]
-
-    Operations:
-        -l      List all available templates
-        -n      Name of the new game launcher script
-        -t      Select a template to base the new entry on
-        -c      Path or url to a cover image (note: this is destructive)
-        -e      Prefered editor, uses \$EDITOR if not set
-
-    Single Operations:
-        -r      Remove launcher(s), cover(s) and reset database
-                If no argument given, attempt to remove all launchers
-
-    Examples:
-        # Creates an entry using the psx template called wipeout_3 using emacs
-        # as the editor
-        barkeep -e emacs -n wipeout_3 -t psx -c ~/wipeout.png
-        
-        # Removes both wipeout_3 and crash_bandicoot launchers along with any
-        # cover images if found and resets the cache
-        barkeep -r wipeout_3 crash_bandicoot
+    mk <name> -t <template> [-c <cover>] [-e <editor>]
+        -t      Select a template to base the new entry on.
+        -c      Path or url to a cover image (note: this is destructive).
+        -e      Prefered editor, uses \$EDITOR if not set.
+        name    The name for the new launcher script.
 
 EOF
 }
 
-chk_template() {
-    local name="$1"
-    local t list
-    
-    for t in "$templatedir"/*; do
-        list+=("${t##*/}")
-    done
+usage_ls() {
+    cat <<EOF
+    ls [-t]
+        -t      List all available templates.
 
-    # Generate a list for `barkeep -l`
-    if [[ "$name" == list && -n "${t[@]}" ]]; then
-        printf '%03s\n' "${list[@]}"
-        exit 0
-    # If we found no templates at all
-    elif [[ -z "${list[@]}" ]]; then
-        err "No templates available"
-        exit 1
-    # Then make sure the chosen template exists itself
-    elif ! in_array "$name" "${list[@]}"; then
-        err "$template: No such template"
-        exit 1
-    fi
+        If no arguments given this will list all entries.
+
+EOF
 }
 
-resize_cover() {
-    local image="$1"
+usage_rm() {
+    cat <<EOF
+    rm [name [name]]
+        Remove launcher(s) and cover(s).
+        If no argument given, attempt to remove all launchers.
 
-    if [[ -e "$image" ]]; then
-        command convert "$image" -resize 368x527\! "$image"
-    fi
+EOF
 }
 
-rm_launcher() {
-    local names
-    local n coverimg
+usage() {
+    cat <<EOF
+Usage: barkeep [-h] mk | rm | ls
+    Each mode has a -h flag which produces a summary of its help section.
 
-    if [[ -n "$@" ]]; then
-        names=("$@")
+EOF
+
+usage_mk
+usage_ls
+usage_rm
+
+    cat <<EOF
+Examples:
+    # Creates an entry using the psx template called wipeout_3 using emacs
+    # as the editor.
+    barkeep mk -e emacs -t psx -c ~/wipeout.png wipeout_3
+
+    # Removes both wipeout_3 and crash_bandicoot launchers along with any
+    # cover images if found.
+    barkeep rm wipeout_3 crash_bandicoot
+
+EOF
+}
+
+puts() {
+    printf -- "$1\n" "${@:2}"
+}
+
+err() {
+    puts "$progn: $@" >&2
+}
+
+confirm() {
+    local msg="$1"
+    local -l reply
+
+    read -p "$msg [Y/n] " reply
+
+    # If the reply is empty, assume Y
+    if [[ -z "$reply" || "$reply" = y?(es) ]]; then
+        return 0
     else
-        # If we get no arguments, just add everything we can find in the bindir
-        names=("$bindir"/*)
+        return 1
     fi
-
-    for n in "${names[@]}"; do
-        coverimg="$coverdir"/"${n##*/}".cover
-
-        # If the file doesn't actually exist, skip it instead of failing
-        if [[ ! -e "$bindir"/"${n##*/}" ]]; then
-            warn "$bindir/${n##*/}: No such file, skipping"
-        elif confirm "Remove $bindir/${n##*/}?"; then
-            rm -vf -- "$bindir"/"${n##*/}"
-            rm -vf -- "$cachedir"/cache.db
-
-            # Make sure a cover image exists before trying to remove it
-            if [[ -e "$coverimg" ]]; then
-                rm -vf -- "$coverdir"/"${n##*/}".cover
-            fi
-        fi
-    done
 }
 
-mk_template() {
-    local name="$1"
+handle_ls() {
+    while (($#)); do
+        case $1 in
+            -t) ls_templates; exit ;;
+            -h) usage_ls; exit ;;
+            *)  err '%s: Unrecognised argument.' "$1"
+                usage_ls; exit 1 ;;
+        esac
+        shift
+    done
+    ls_entries
+}
+
+ls_entries() {
+    #global bindir
+    local entries
+
+    entries=("$bindir"/*)
+
+    if [[ -n "$entries" ]]; then
+        puts 'Current entries:'
+        puts '    %s' "${entries[@]##*/}"
+        puts ""
+    else
+        err '%s: No entries found.' "$entries"
+    fi
+}
+
+ls_templates() {
+    #global templatedir
+    local templates
+
+    templates=("$templatedir"/*)
+
+    if [[ -n "$templates" ]]; then
+        puts 'Available templates:'
+        puts '    %s' "${templates[@]##*/}"
+        puts ""
+    else
+        err '%s: No templates found.' "$templatedir"
+    fi
+}
+
+handle_mk() {
+    #global bindir templatedir coverdir EDITOR
+    local entry cover template editor
+
+    while (($#)); do
+        case $1 in
+            -c) shift; cover="$1" ;;
+            -t) shift; template="$1" ;;
+            -e) shift; editor="$1" ;;
+            -h) usage_mk; exit ;;
+            *) entry="$1"
+        esac
+        shift
+    done
+
+    if [[ -z "$entry" ]]; then
+        err 'An entry name is required.'
+        usage_mk
+        exit 1
+    fi
+
+    if [[ -e "$bindir"/"$entry" ]]; then
+        err '%s: This entry already exists.  See `%s ls -e`.' "$bindir"/"$entry" "$progn"
+        exit 1
+    fi
+
+    if [[ -z "$template" ]]; then
+        err 'A template required.  See `%s ls -t`.' "$progn"
+        usage_mk
+        exit 1
+    fi
+
+    if [[ ! -e "$templatedir"/"$template" ]]; then
+        err '%s: Unable to find requested template.' "$templatedir"/"$template"
+        exit 1
+    fi
+
+    if [[ -z "$cover" ]]; then
+        cover="$coverdir"/placeholder
+    else
+        mk_cover "$entry" "$cover"
+    fi
+
+    mk_entry "$bindir"/"$entry" "$templatedir"/"$template"
+}
+
+mk_entry() {
+    local entry="$1"
     local template="$2"
 
-    # Check the template and make sure it doesn't already exist and is available
-    chk_template "$template"
-
-    if [[ -e "$bindir"/"$name" ]]; then
-        err "$bindir/$name: Already exists"
-        exit 1
-    else
-        cp -v -- "$templatedir"/"$template" "$bindir"/"$name"
-        chmod -c +x -- "$bindir"/"$name"
-    fi
+    cp -v -- "$template" "$entry"
+    command "${editor:-${EDITOR:-vi}}" "$entry"
+    chmod +x -- "$entry"
 }
 
 mk_cover() {
-    local name="$1"
+    local entry="$1"
     local cover="$2"
-    local coverpath
 
-    # Lets check that the placeholder actually exists here so warnings don't
-    # appear when removing titles that have nothing to do with the placeholder
-    if [[ ! -e "$placeholder" ]]; then
-        warn "$placeholder: Not found, using nothing instead"
-        placeholder="nothing"
-    fi
-
-    # Support http, https and ftp 
-    if [[ "$cover" =~ [ht\|f]tps? ]]; then
-        if curl -o "$TMPDIR"/barkeep-image "$cover"; then
-            coverpath="$TMPDIR"/barkeep-image
+    if [[ "$cover" =~ [https?\|f]tp ]]; then
+        if curl -#o "$TMPDIR"/barkeep_cover "$cover"; then
+            cover="$TMPDIR"/barkeep_cover
         else
-            warn "Failed to fetch $cover"
+            err '%s: Failed to download cover.' "$cover"
+            exit 1
         fi
+    fi
+
+    if [[ -e "$cover" ]]; then
+        command convert "$cover" -resize 368x527\! "$cover"
+        mv -v -- "$cover" "$coverdir"/"$entry"
     else
-        # Get the absolute path to the cover image 
-        coverpath="$(get_abs_dir "$cover")"
-    fi
-
-    if [[ ! -e "$coverpath" ]]; then
-        warn "No cover image available, using $placeholder"
-    fi
-
-    if [[ -e "$coverdir"/"$name" ]]; then
-        warn "$coverdir/$name: Already exists, using $coverdir/$name.cover"
-    elif [[ -e "$coverpath" ]]; then
-        mv -v -- "$coverpath" "$coverdir"/"$name".cover
-        if ! resize_cover "$coverdir"/"$name".cover; then
-            warn "Failed to resize image, falling back to $placeholder"
-            rm -vf -- "$coverdir"/"$name".cover
-        fi
+        err '%s: I lost the cover image :-(.' "$cover"
     fi
 }
 
-# We need at least one argument, if none are provided display usage information
-# and exit
+handle_rm() {
+    local entry entries remove
+
+    while (($#)); do
+        case $1 in
+            -h) usage_rm; exit ;;
+            *)  entries+=("$1")
+        esac
+        shift
+    done
+
+    if [[ -z "${entries[@]}" ]]; then
+        entries=("$bindir"/*)
+        entries="${entries[@]##$bindir/}"
+
+        if [[ -z "${entries[@]}" ]]; then
+            err '%s: Nothing here to remove.' "$bindir"
+            exit 1
+        fi
+    fi
+
+    puts 'Attempting to remove the following launchers:'
+    puts '%s' "${entries[@]}"
+
+    if ! confirm "Continue?"; then
+        puts 'Nothing removed.'
+        exit
+    fi
+
+    for entry in "${entries[@]}"; do
+        if [[ -e "$bindir"/"$entry" ]]; then
+            remove+=("$bindir"/"$entry")
+        fi
+
+        if [[ -e "$coverdir"/"$entry" ]]; then
+            remove+=("$coverdir"/"$entry")
+        fi
+    done
+
+    rm -v -- "${remove[@]}"
+}
+
+mkdir -p "$datadir" "$bindir" "$coverdir"
+
 if (($# == 0)); then
-    err "At least one argument is required"
+    err 'At least one argument is required.'
     usage
     exit 1
 fi
 
-# I will handle the errors manually
-while getopts ':hlt:d:c:n:re:' argv; do
-    case "$argv" in
-        n)
-            name="$OPTARG"
-
-            # The following is a hack to work around multiple arguments given to 
-            # a single option, this will use current OPTIND as the index to $@
-            # plus one argument, then if it doesn't begin with a '-', increment
-            # it, skipping extra non-arguments until we fine one.
-            
-            # This allows us to restrict an option to only accept a single 
-            # argument.
-            [[ "${@:OPTIND:1}" != -* ]] && ((++OPTIND))
-            ;;
-        t)
-            template="$OPTARG"
-            [[ "${@:OPTIND:1}" != -* ]] && ((++OPTIND))
-            ;;
-        e)
-            editor="$OPTARG"
-            [[ "${@:OPTIND:1}" != -* ]] && ((++OPTIND))
-            ;;
-        c)
-            cover="$OPTARG"
-            [[ "${@:OPTIND:1}" != -* ]] && ((++OPTIND))
-            ;;
-        r)
-            remove=t
-            shift
-            ;;
-        l)
-            chk_template list
-            ;;
-        h)
-            usage
-            exit 0
-            ;;
-        :)
-            err "Option -$OPTARG requires an argument"
+while (($#)); do
+    case $1 in
+        ls) shift; handle_ls "$@"
+            exit ;;
+        mk) shift; handle_mk "$@"
+            exit ;;
+        rm) shift; handle_rm "$@"
+            exit ;;
+        -h) usage
+            exit ;;
+        *)  err '%s: Unrecognised argument.' "$1"
             usage
             exit 1
-            ;;
-        ?)
-            err "Invalid option: -$OPTARG"
-            usage
-            exit 1
-            ;;
     esac
+    shift
 done
-
-# Process removal before continuing making sure that both of the mandatory
-# arguments aren't set before attempting it
-if [[ "$remove" == t && -z "$name" && -z "$template" ]]; then
-    rm_launcher "$@"
-    exit 0
-fi
-
-# Make sure a name is supplied
-if [[ -z "$name" ]]; then
-    err "A NAME is required"
-    exit 1
-fi
-
-# Set the editor if none was specified
-if [[ -z "$editor" ]]; then
-    EDITOR="${VISUAL:-$EDITOR}"
-else
-    EDITOR="$editor"
-fi
-
-# Exit before making a template as an editor is required, otherwise we could
-# just make a note of this and not run an editor after creation
-if ! hash "$EDITOR" &> /dev/null; then
-    err "$EDITOR: Does not exist"
-    exit 1
-fi
-
-# Make sure a template was chosen
-if [[ -n "$template" ]]; then
-    mk_template "$name" "$template"
-else
-    err "No template selected"
-    exit 1
-fi
-
-if [[ -n "$cover" ]]; then
-    mk_cover "$name" "$cover"
-else
-    warn "No image selected, using $placeholder"
-fi
-
-# Let the user edit the template, I'm not going to try run a CPP over this or any
-# other kind of templating engine as it just increases complexity, maybe...
-command "$EDITOR" "$bindir"/"$name"
