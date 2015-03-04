@@ -19,7 +19,7 @@ Install
 .. code-block:: sh
 
     # I keep my local binaries in ~/.local/bin
-    make DESTDIR="$HOME"/.local PREFIX=/bin install
+    make DESTDIR="$HOME"/.local install
 
     # Optionally you can add your launchers to PATH.
     PATH="$PATH":"${XDG_DATA_HOME:-$HOME/.local/share}"/taverner/bin
