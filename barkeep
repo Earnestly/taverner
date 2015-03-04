@@ -178,12 +178,13 @@ handle_mk() {
         mk_cover "$entry" "$cover"
     fi
 
-    mk_entry "$bindir"/"$entry" "$templatedir"/"$template"
+    mk_entry "$editor" "$bindir"/"$entry" "$templatedir"/"$template"
 }
 
 mk_entry() {
-    local entry="$1"
-    local template="$2"
+    local editor="$1"
+    local entry="$2"
+    local template="$3"
 
     cp -v -- "$template" "$entry"
     command "${editor:-${EDITOR:-vi}}" "$entry"
@@ -253,7 +254,7 @@ handle_rm() {
     rm -v -- "${remove[@]}"
 }
 
-mkdir -p "$datadir" "$bindir" "$coverdir"
+mkdir -p "$datadir" "$bindir" "$coverdir" "$templatedir"
 
 if (($# == 0)); then
     err 'At least one argument is required.'
