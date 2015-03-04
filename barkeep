@@ -6,7 +6,6 @@
 shopt -s nullglob
 
 # Globals
-prefix="$HOME"/games
 readonly progn=barkeep
 readonly datadir="${XDG_DATA_HOME:-$HOME/.local/share}"
 readonly prefix="$datadir"/taverner
