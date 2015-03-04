@@ -1,4 +1,4 @@
-PREFIX ?= /usr/local
+DESTDIR ?= /usr/local
 
 install:
 	install -Dm755 taverner $(DESTDIR)$(PREFIX)/bin/taverner
