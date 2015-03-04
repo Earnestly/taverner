@@ -113,7 +113,7 @@ ls_entries() {
 
     if [[ -n "$entries" ]]; then
         puts 'Current entries:'
-        puts '    %s' "${entries[@]##*/}"
+        puts '%s' "${entries[@]##*/}"
         puts ""
     else
         err '%s: No entries found.' "$entries"
@@ -128,7 +128,7 @@ ls_templates() {
 
     if [[ -n "$templates" ]]; then
         puts 'Available templates:'
-        puts '    %s' "${templates[@]##*/}"
+        puts '%s' "${templates[@]##*/}"
         puts ""
     else
         err '%s: No templates found.' "$templatedir"
