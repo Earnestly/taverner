@@ -115,7 +115,7 @@ process_results() {
 
     while read -r pick; do
         if [[ -n "${titles[$pick]}" ]]; then
-            game="${titles[$pick]}"
+            entry="${titles[$pick]}"
         else
             err '%s: Cannot find associated launcher.' "$pick"
             exit 1
