@@ -29,23 +29,39 @@ What & How
 Briefly, a typical session may look like this::
 
     % barkeep -h
-    Usage: barkeep [-h] mk | rm | ls
-        Each mode has a -h flag which produces a summary of its help section.
+    Usage: barkeep [-h] mk | ls | ed | rm
+        Each mode has an -h flag which produces a summary of its help section.
 
-        mk <name> -t <template> [-c <cover>] [-e <editor>]
+    Create a new menu entry.
+
+        mk <entry> -t <template> [-c <cover>] [-e <editor>]
             -t      Select a template to base the new entry on.
             -c      Path or url to a cover image (note: this is destructive).
             -e      Prefered editor, uses $EDITOR if not set.
-            name    The name for the new launcher script.
+            entry   The name for the new launcher script.
+
+    List entries and templates.
 
         ls [-t]
             -t      List all available templates.
 
             If no arguments given this will list all entries.
 
-        rm [name [name]]
-            Remove launcher(s) and cover(s).
-            If no argument given, attempt to remove all launchers.
+    Edit the selected entry or template.
+
+        ed [-t <template>] [-e <editor>] [-c <cover>] [entry]
+            -t      Attempts to open the template with $EDITOR.
+            -c      Replace the cover for entry, note that the entry is required
+                    for this operation.
+            -e      Prefered editor, uses $EDITOR if not set.
+            entry   Edit the selected entry.
+
+            Note: Only one operation is possible per innvocation.
+
+    Remove selected entries and corresponding covers.
+
+        rm [entry [entry]]
+            If no argument given, attempt to remove all entires.
 
     Examples:
         # Creates an entry using the psx template called wipeout_3 using emacs
