@@ -71,7 +71,7 @@ generate_entry_data() {
     done
 }
 
-create_dmenu() {
+create_menu() {
     #global titles covers
     local key
 
@@ -82,15 +82,15 @@ create_dmenu() {
 
 get_user_picks() {
     #global dmenu_opts
-    create_dmenu | sort | dmenu "${dmenu_opts[@]}"
+    create_menu | sort | dmenu "${dmenu_opts[@]}"
 }
 
 launch() {
     local err
-    local executable="$1"
+    local entry="$1"
 
-    if ! err="$(command -- "$executable")"; then
-        err '%s' "${err:-$executable}"
+    if ! err="$(command -- "$entry")"; then
+        err '%s' "${err:-$entry}"
     fi
 }
 
