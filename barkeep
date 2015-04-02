@@ -227,10 +227,10 @@ mk_cover() {
     fi
 
     if [[ -e "$cover" ]]; then
-        command convert "$cover" -resize 368x527\! "$cover"
+        command gm mogrify -resize 368x527\! "$cover"
         mv -fv -- "$cover" "$coverdir"/"$entry"
     else
-        err '%s: I lost the cover image :-(.' "$cover"
+        err '%s: Unable to find cover.' "$cover"
     fi
 }
 

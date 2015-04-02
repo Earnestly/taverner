@@ -11,7 +11,7 @@ convenient.
 Requires
 --------
 * bash 4.2+
-* imagemagick
+* graphicsmagick
 * dmenu-pango-imlib_
 
 Install
