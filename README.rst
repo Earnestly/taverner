@@ -29,15 +29,16 @@ What & How
 Briefly, a typical session may look like this::
 
     % barkeep -h
-    Usage: barkeep [-h] mk | ls | ed | rm
+    Usage: barkeep [-h] [mk | ls | ed | rm]
         Each mode has an -h flag which produces a summary of its help section.
 
-    Create a new menu entry.
+        -e      Prefered editor, uses $EDITOR if not set.
 
-        mk <entry> -t <template> [-c <cover>] [-e <editor>]
+    Create a new menu entry.  Uses $EDITOR to complete the new entry.
+
+        mk [-c <cover>] -t <template> <entry>
             -t      Select a template to base the new entry on.
-            -c      Path or url to a cover image (note: this is destructive).
-            -e      Prefered editor, uses $EDITOR if not set.
+            -c      Path or url to a cover image.  (Note: This is destructive)
             entry   The name for the new launcher script.
 
     List entries and templates.
@@ -47,21 +48,23 @@ Briefly, a typical session may look like this::
 
             If no arguments given this will list all entries.
 
-    Edit the selected entry or template.
+    Edit the selected entry or template.  Only one entry may be edited per
+    innvocation.
 
-        ed [-t <template>] [-e <editor>] [-c <cover>] [entry]
+        ed [-t <template>] [-c <cover>] [entry]
             -t      Attempts to open the template with $EDITOR.
             -c      Replace the cover for entry, note that the entry is required
                     for this operation.
-            -e      Prefered editor, uses $EDITOR if not set.
-            entry   Edit the selected entry.
+            entry   Attempts to open the entry with $EDITOR.
 
-            Note: Only one operation is possible per innvocation.
+        Issue: If -c is specified for an entry, it will both update the entries
+               cover image but also offer to edit the entry as well.
 
-    Remove selected entries and corresponding covers.
+    Remove selected entries and corresponding covers.  If no argument given,
+    attempt to remove all entires.
 
         rm [entry [entry]]
-            If no argument given, attempt to remove all entires.
+            entry   The chosen entry to remove.
 
     Examples:
         # Creates an entry using the psx template called wipeout_3 using emacs
@@ -75,7 +78,6 @@ Briefly, a typical session may look like this::
 ::
 
     % barkeep ls -t
-    Available templates:
         psx
         snes
         psp
@@ -134,10 +136,6 @@ the launcher scripts and setting up the cover image along with other potential
 tweaks.  This is where ``barkeep`` comes in, it exists simply to aid me in
 creating the launchers, copying over templates and letting me just add any
 necessary tweaks.
-
-I would like to more fully develop this using the ``m4`` macro language one day
-and use a proper caching system which can detect metadata changes without
-incurring the cost of reading said metadata in the first place.
 
 .. _dmenu: https://github.com/Cloudef/dmenu-pango-imlib
 .. _dmenu-pango-imlib: https://github.com/Earnestly/pkgbuilds/blob/master/dmenu-pango-imlib-git/PKGBUILD

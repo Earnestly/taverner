@@ -16,20 +16,19 @@ readonly templatedir="$prefix"/templates
 readonly TMPDIR=/tmp
 
 usage_mk() {
-    cat <<EOF
-Create a new menu entry.
+    cat <<'!'
+Create a new menu entry.  Uses $EDITOR to complete the new entry.
 
-    mk <entry> -t <template> [-c <cover>] [-e <editor>]
+    mk [-c <cover>] -t <template> <entry>
         -t      Select a template to base the new entry on.
-        -c      Path or url to a cover image (note: this is destructive).
-        -e      Prefered editor, uses \$EDITOR if not set.
+        -c      Path or url to a cover image.  (Note: This is destructive)
         entry   The name for the new launcher script.
 
-EOF
+!
 }
 
 usage_ls() {
-    cat <<EOF
+    cat <<!
 List entries and templates.
 
     ls [-t]
@@ -37,48 +36,52 @@ List entries and templates.
 
         If no arguments given this will list all entries.
 
-EOF
+!
 }
 
 usage_ed() {
-    cat <<EOF
-Edit the selected entry or template.
+    cat <<'!'
+Edit the selected entry or template.  Only one entry may be edited per
+innvocation.
 
-    ed [-t <template>] [-e <editor>] [-c <cover>] [entry]
-        -t      Attempts to open the template with \$EDITOR.
+    ed [-t <template>] [-c <cover>] [entry]
+        -t      Attempts to open the template with $EDITOR.
         -c      Replace the cover for entry, note that the entry is required
                 for this operation.
-        -e      Prefered editor, uses \$EDITOR if not set.
-        entry   Edit the selected entry.
+        entry   Attempts to open the entry with $EDITOR.
 
-        Note: Only one operation is possible per innvocation.
+    Issue: If -c is specified for an entry, it will both update the entries
+           cover image but also offer to edit the entry as well.
 
-EOF
+!
 }
 
 usage_rm() {
-    cat <<EOF
-Remove selected entries and corresponding covers.
+    cat <<!
+Remove selected entries and corresponding covers.  If no argument given,
+attempt to remove all entires.
 
     rm [entry [entry]]
-        If no argument given, attempt to remove all entires.
+        entry   The chosen entry to remove.
 
-EOF
+!
 }
 
 usage() {
-    cat <<EOF
-Usage: barkeep [-h] mk | ls | ed | rm
+    cat <<'!'
+Usage: barkeep [-h] [mk | ls | ed | rm]
     Each mode has an -h flag which produces a summary of its help section.
 
-EOF
+    -e      Prefered editor, uses $EDITOR if not set.
+
+!
 
 usage_mk
 usage_ls
 usage_ed
 usage_rm
 
-    cat <<EOF
+    cat <<!
 Examples:
     # Creates an entry using the psx template called wipeout_3 using emacs
     # as the editor.
@@ -87,8 +90,7 @@ Examples:
     # Removes both wipeout_3 and crash_bandicoot launchers along with any
     # cover images if found.
     barkeep rm wipeout_3 crash_bandicoot
-
-EOF
+!
 }
 
 puts() {
@@ -100,17 +102,13 @@ err() {
 }
 
 confirm() {
-    local msg="$1"
+    local msg=$1
     local -l reply
 
     read -p "$msg [Y/n] " reply
 
     # If the reply is empty, assume Y
-    if [[ -z "$reply" || "$reply" = y?(es) ]]; then
-        return 0
-    else
-        return 1
-    fi
+    [[ $reply = y || ! $reply ]]
 }
 
 handle_ls() {
@@ -123,78 +121,72 @@ handle_ls() {
         esac
         shift
     done
+
     ls_entries
 }
 
 ls_entries() {
-    #global bindir
     local entries
 
     entries=("$bindir"/*)
 
-    if [[ -n "$entries" ]]; then
-        puts 'Current entries:'
+    if ((${#entries[@]})); then
         puts '%s' "${entries[@]##*/}"
-        puts ""
     else
-        err '%s: No entries found.' "$entries"
+        err '%s: No entries found here.' "$bindir"
     fi
 }
 
 ls_templates() {
-    #global templatedir
     local templates
 
     templates=("$templatedir"/*)
 
-    if [[ -n "$templates" ]]; then
-        puts 'Available templates:'
+    if ((${#templates[@]})); then
         puts '%s' "${templates[@]##*/}"
-        puts ""
     else
-        err '%s: No templates found.' "$templatedir"
+        err '%s: No templates found here.' "$templatedir"
     fi
 }
 
 handle_mk() {
-    #global bindir templatedir coverdir EDITOR progn
     local entry cover template editor
 
     while (($#)); do
         case $1 in
-            -c) shift; cover="$1" ;;
-            -t) shift; template="$1" ;;
-            -e) shift; editor="$1" ;;
+            -c) shift; cover=$1 ;;
+            -t) shift; template=$1 ;;
+            -e) shift; editor=$1 ;;
             -h) usage_mk; exit ;;
-            *) entry="$1"
+            *) entry=$1
         esac
         shift
     done
 
-    if [[ -z "$entry" ]]; then
+    if [[ !$entry ]]; then
         err 'An entry name is required.'
         usage_mk
         exit 1
     fi
 
-    if [[ -e "$bindir"/"$entry" ]]; then
+    if [[ -e $bindir/$entry ]]; then
         err '%s: This entry already exists.  See `%s ls -e`.' "$bindir"/"$entry" "$progn"
         exit 1
     fi
 
-    if [[ -z "$template" ]]; then
+    if [[ ! $template ]]; then
         err 'A template required.  See `%s ls -t`.' "$progn"
         usage_mk
         exit 1
     fi
 
-    if [[ ! -e "$templatedir"/"$template" ]]; then
+    if [[ ! -e $templatedir/$template ]]; then
         err '%s: Unable to find requested template.' "$templatedir"/"$template"
         exit 1
     fi
 
-    if [[ -z "$cover" ]]; then
-        cover="$coverdir"/placeholder
+    if [[ ! $cover ]]; then
+        cover=$coverdir/placeholder
     else
         mk_cover "$entry" "$cover"
     fi
@@ -203,32 +195,31 @@ handle_mk() {
 }
 
 mk_entry() {
-    local editor="$1"
-    local entry="$2"
-    local template="$3"
+    local editor=$1
+    local entry=$2
+    local template=$3
 
-    cp -fv -- "$template" "$entry"
+    cp -vf -- "$template" "$entry"
     command "${editor:-${EDITOR:-vi}}" "$entry"
     chmod -c +x -- "$entry"
 }
 
 mk_cover() {
-    #global TMPDIR coverdir
-    local entry="$1"
-    local cover="$2"
+    local entry=$1
+    local cover=$2
 
-    if [[ "$cover" =~ [https?\|f]tp ]]; then
+    if [[ $cover =~ [https?\|f]tp ]]; then
         if curl -#o "$TMPDIR"/barkeep_cover "$cover"; then
-            cover="$TMPDIR"/barkeep_cover
+            cover=$TMPDIR/barkeep_cover
         else
             err '%s: Failed to download cover.' "$cover"
             exit 1
         fi
     fi
 
-    if [[ -e "$cover" ]]; then
+    if [[ -e $cover ]]; then
         command gm mogrify -resize 368x527\! "$cover"
-        mv -fv -- "$cover" "$coverdir"/"$entry"
+        mv -vf -- "$cover" "$coverdir"/"$entry"
     else
         err '%s: Unable to find cover.' "$cover"
     fi
@@ -240,76 +231,86 @@ handle_rm() {
     while (($#)); do
         case $1 in
             -h) usage_rm; exit ;;
-            *)  entries+=("$1")
+            *)  entries+=($1)
         esac
         shift
     done
 
-    if [[ -z "${entries[@]}" ]]; then
+    if ! ((${#entries[@]})); then
         entries=("$bindir"/*)
-        entries="${entries[@]##$bindir/}"
 
-        if [[ -z "${entries[@]}" ]]; then
+        # As the proceeding removal code may not be dealing with absolute paths
+        # if a user explicitly makes a selection we strip the bindir here to
+        # keep it consistent with this assumption.
+        entries=(${entries[@]##$bindir/})
+
+        if ! ((${#entries[@]})); then
             err '%s: Nothing here to remove.' "$bindir"
             exit 1
         fi
     fi
 
     puts 'Attempting to remove the following launchers:'
-    puts '%s' "${entries[@]}"
+    puts '%s' "${entries[@]##$bindir/}"
 
-    if ! confirm "Continue?"; then
+    if ! confirm 'Continue?'; then
         puts 'Nothing removed.'
         exit
     fi
 
     for entry in "${entries[@]}"; do
-        if [[ -e "$bindir"/"$entry" ]]; then
+        if [[ -e $bindir/$entry ]]; then
             remove+=("$bindir"/"$entry")
         fi
 
-        if [[ -e "$coverdir"/"$entry" ]]; then
+        if [[ -e $coverdir/$entry ]]; then
             remove+=("$coverdir"/"$entry")
         fi
     done
 
-    rm -fv -- "${remove[@]}"
+    rm -vf -- "${remove[@]}"
 }
 
 handle_ed() {
-    #global bindir templatedir coverdir EDITOR progn
-    local entry cover template editor
+    local entry cover template editor collated_files
 
     while (($#)); do
         case $1 in
-            -c) shift; cover="$1" ;;
-            -t) shift; template="$1" ;;
-            -e) shift; editor="$1" ;;
+            -c) shift; cover=$1 ;;
+            -t) shift; template=$1 ;;
+            -e) shift; editor=$1 ;;
             -h) usage_ed; exit ;;
-            *) entry="$1"
+            *) entry=($1)
         esac
         shift
     done
 
-    if [[ -n "$entry" && -n "$cover" ]]; then
+    if ((${#entry[@]} > 1)); then
+        err 'Only one entry can be edited per innvocation.'
+        exit 1
+    fi
+
+    if [[ $entry && $cover ]]; then
         mk_cover "$entry" "$cover"
         exit
     fi
 
-    if [[ -n "$template" && -e "$templatedir"/"$template" ]]; then
-        command -- "${editor:-${EDITOR:-vi}}" "$templatedir"/"$template"
-        exit
+    if [[ $template && -e $templatedir/$template ]]; then
+        collated_files+=("$templatedir"/"$template")
     fi
 
-    if [[ -n "$entry" && -e "$bindir"/"$entry" ]]; then
-        command -- "${editor:-${EDITOR:-vi}}" "$bindir"/"$entry"
-        exit
+    if [[ $entry && -e $bindir/$entry ]]; then
+        collated_files+=("$bindir"/"$entry")
+    fi
+
+    if ((${#collated_files[@]})); then
+        command -- "${editor:-${EDITOR:-vi}}" "${collated_files[@]}"
     fi
 }
 
 mkdir -p "$datadir" "$bindir" "$coverdir" "$templatedir"
 
-if (($# == 0)); then
+if ! (($#)); then
     err 'At least one argument is required.'
     usage
     exit 1
