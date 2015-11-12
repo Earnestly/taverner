@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
 # barkeep
-# Creates a game entry based on a template for use with `taverner`
+# Creates a game entry based on a template for use with `taverner`.
 
 # Options
 shopt -s nullglob
 
-# Globals
-readonly progn=barkeep
-readonly datadir="${XDG_DATA_HOME:-$HOME/.local/share}"
-readonly prefix="$datadir"/taverner
-readonly bindir="$prefix"/bin
-readonly coverdir="$prefix"/covers
-readonly templatedir="$prefix"/templates
+readonly argv0=barkeep
+
+readonly prefix=${XDG_DATA_HOME:-$HOME/.local/share}/taverner
+readonly bindir=$prefix/bin
+readonly coverdir=$prefix/covers
+readonly templatedir=$prefix/templates
 
 readonly TMPDIR=/tmp
 
@@ -98,17 +97,17 @@ puts() {
 }
 
 err() {
-    puts "$progn: $@" >&2
+    puts "$argv0: $1" "${@:2}" >&2
 }
 
 confirm() {
     local msg=$1
     local -l reply
 
-    read -p "$msg [Y/n] " reply
+    read -rp "$msg [Y/n] " reply
 
     # If the reply is empty, assume Y
-    [[ $reply = y || ! $reply ]]
+    [[ $reply == y || ! $reply ]]
 }
 
 handle_ls() {
@@ -116,8 +115,7 @@ handle_ls() {
         case $1 in
             -t) ls_templates; exit ;;
             -h) usage_ls; exit ;;
-            *)  err '%s: Unrecognised argument.' "$1"
-                usage_ls; exit 1 ;;
+            *)  err '%s: Unrecognised argument' "$1"; exit 1 ;;
         esac
         shift
     done
@@ -133,7 +131,7 @@ ls_entries() {
     if ((${#entries[@]})); then
         puts '%s' "${entries[@]##*/}"
     else
-        err '%s: No entries found here.' "$bindir"
+        err '%s: No entries found here' "$bindir"
     fi
 }
 
@@ -145,7 +143,7 @@ ls_templates() {
     if ((${#templates[@]})); then
         puts '%s' "${templates[@]##*/}"
     else
-        err '%s: No templates found here.' "$templatedir"
+        err '%s: No templates found here' "$templatedir"
     fi
 }
 
@@ -163,25 +161,23 @@ handle_mk() {
         shift
     done
 
-    if [[ !$entry ]]; then
-        err 'An entry name is required.'
-        usage_mk
+    if [[ ! $entry ]]; then
+        err 'An entry name is required'
         exit 1
     fi
 
     if [[ -e $bindir/$entry ]]; then
-        err '%s: This entry already exists.  See `%s ls -e`.' "$bindir"/"$entry" "$progn"
+        err '%s: This entry already exists.  See %s ls -e' "$bindir"/"$entry" "$argv0"
         exit 1
     fi
 
     if [[ ! $template ]]; then
-        err 'A template required.  See `%s ls -t`.' "$progn"
-        usage_mk
+        err 'A template required.  See %s ls -t' "$argv0"
         exit 1
     fi
 
     if [[ ! -e $templatedir/$template ]]; then
-        err '%s: Unable to find requested template.' "$templatedir"/"$template"
+        err '%s: Unable to find requested template' "$templatedir"/"$template"
         exit 1
     fi
 
@@ -212,7 +208,7 @@ mk_cover() {
         if curl -#o "$TMPDIR"/barkeep_cover "$cover"; then
             cover=$TMPDIR/barkeep_cover
         else
-            err '%s: Failed to download cover.' "$cover"
+            err '%s: Failed to download cover' "$cover"
             exit 1
         fi
     fi
@@ -221,7 +217,7 @@ mk_cover() {
         command gm mogrify -resize 368x527\! "$cover"
         mv -vf -- "$cover" "$coverdir"/"$entry"
     else
-        err '%s: Unable to find cover.' "$cover"
+        err '%s: Unable to find cover' "$cover"
     fi
 }
 
@@ -245,7 +241,7 @@ handle_rm() {
         entries=(${entries[@]##$bindir/})
 
         if ! ((${#entries[@]})); then
-            err '%s: Nothing here to remove.' "$bindir"
+            err '%s: Nothing here to remove' "$bindir"
             exit 1
         fi
     fi
@@ -254,7 +250,7 @@ handle_rm() {
     puts '%s' "${entries[@]##$bindir/}"
 
     if ! confirm 'Continue?'; then
-        puts 'Nothing removed.'
+        puts 'Nothing removed'
         exit
     fi
 
@@ -280,15 +276,10 @@ handle_ed() {
             -t) shift; template=$1 ;;
             -e) shift; editor=$1 ;;
             -h) usage_ed; exit ;;
-            *) entry=($1)
+            *) entry=$1
         esac
         shift
     done
-
-    if ((${#entry[@]} > 1)); then
-        err 'Only one entry can be edited per innvocation.'
-        exit 1
-    fi
 
     if [[ $entry && $cover ]]; then
         mk_cover "$entry" "$cover"
@@ -308,10 +299,10 @@ handle_ed() {
     fi
 }
 
-mkdir -p "$datadir" "$bindir" "$coverdir" "$templatedir"
+mkdir -p "$bindir" "$coverdir" "$templatedir"
 
 if ! (($#)); then
-    err 'At least one argument is required.'
+    err 'At least one argument is required'
     usage
     exit 1
 fi
@@ -328,7 +319,7 @@ while (($#)); do
             exit ;;
         -h) usage
             exit ;;
-        *)  err '%s: Unrecognised argument.' "$1"
+        *)  err '%s: Unrecognised argument' "$1"
             usage
             exit 1
     esac

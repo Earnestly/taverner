@@ -5,15 +5,11 @@
 
 shopt -s nullglob
 
-readonly progn=taverner
-readonly datadir=${XDG_DATA_HOME:-$HOME/.local/share}
-readonly prefix=$datadir/taverner
+readonly argv0=taverner
+
+readonly prefix=${XDG_DATA_HOME:-$HOME/.local/share}/taverner
 readonly bindir=$prefix/bin
 readonly coverdir=$prefix/covers
-
-# Main globals used throughout the code, unfortunately.
-declare -A titles
-declare -A covers
 
 read -r font < "${XDG_CONFIG_HOME:-$HOME/.config}"/dmenu/font
 readonly dmenu_opts=(
@@ -28,7 +24,7 @@ puts() {
 }
 
 err() {
-    puts "$progn: $@" >&2
+    puts "$argv0: $1" "${@:2}" >&2
 }
 
 title_in() {
@@ -71,16 +67,17 @@ generate_entry_data() {
     done
 }
 
-create_menu() {
+create_sorted_menu() {
+    # global titles covers
     local key
 
     for key in "${!titles[@]}"; do
         puts 'IMG:%s\t%s' "${covers[$key]}" "$key"
-    done
+    done | sort
 }
 
 get_user_picks() {
-    create_menu | sort | dmenu "${dmenu_opts[@]}"
+    create_sorted_menu | dmenu "${dmenu_opts[@]}"
 }
 
 launch() {
@@ -93,10 +90,10 @@ launch() {
 }
 
 populate_arrays() {
-    #global titles covers
+    # global titles covers entry
 
-    # Parse the list into two arrays.  We keep a consistent key so we can access
-    # the correct corresonding information for both lookups.
+    # Parse the list into two arrays.  We keep a consistent key so we can
+    # access the correct corresonding information for both lookups.
     while {
         read -r title
         read -r entry
@@ -108,14 +105,14 @@ populate_arrays() {
 }
 
 process_results() {
-    #global titles
+    # global titles
     local pick entry
 
     while read -r pick; do
-        if [[ -n "${titles[$pick]}" ]]; then
+        if [[ ${titles[$pick]} ]]; then
             entry="${titles[$pick]}"
         else
-            err '%s: Cannot find associated launcher.' "$pick"
+            err '%s: Cannot find associated launcher' "$pick"
             exit 1
         fi
 
@@ -123,7 +120,10 @@ process_results() {
     done
 }
 
-mkdir -p "$datadir" "$bindir" "$coverdir"
+declare -A titles
+declare -A covers
+
+mkdir -p "$bindir" "$coverdir"
 
 populate_arrays < <(generate_entry_data)
 
