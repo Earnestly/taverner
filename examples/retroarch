@@ -1,0 +1,32 @@
+#!/bin/bash
+# Title: title (SYSTEM year)
+
+# This general RetroArch template assumes roms are stored in
+# LOCALDIR/data/game/<system> and the cores in LOCALDIR/data/retroarch/core.
+
+# Change the SYSTEM in the title to something more appropriate such as PSX,
+# GBA, MAME, NEO and so on.
+
+rom=
+
+# Append any configurations here, such as different controller layouts, filter
+# options or otherwise. The configuration file is assumed to be in
+# LOCALDIR/cfg/retroarch.  Leave blank if unwanted.
+append=
+
+prefix=$LOCALDIR/data/retroarch
+
+# Path to the games for a certain system, for example PSX:
+rompath=$LOCALDIR/data/game/psx
+
+# Prefered core associated with the system:
+emulator=$prefix/core/pcsx_rearmed_libretro.so
+
+# For mesa, if needed, disable vsync:
+export vblank_mode=0
+
+if [[ $append ]]; then
+    options=(--appendconfig "$LOCALDIR/cfg/retroarch/$append")
+fi
+
+exec retroarch "${options[@]}" -L "$emulator" "$rompath/$rom"

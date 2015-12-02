@@ -7,11 +7,11 @@ shopt -s nullglob
 
 readonly argv0=taverner
 
-readonly prefix=${XDG_DATA_HOME:-$HOME/.local/share}/taverner
+readonly prefix=${LOCALDIR:-$HOME/local}/data/taverner
 readonly bindir=$prefix/bin
 readonly coverdir=$prefix/covers
 
-read -r font < "${XDG_CONFIG_HOME:-$HOME/.config}"/dmenu/font
+read -r font < "${LOCALDIR:-$HOME/local}"/cfg/dmenu/font
 readonly dmenu_opts=(
     -i -w -ia top-gapless -is 200x250
     -fn "$font" -p 'Launch'

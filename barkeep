@@ -7,7 +7,7 @@ shopt -s nullglob
 
 readonly argv0=barkeep
 
-readonly prefix=${XDG_DATA_HOME:-$HOME/.local/share}/taverner
+readonly prefix=${LOCALDIR:-$HOME/local}/data/taverner
 readonly bindir=$prefix/bin
 readonly coverdir=$prefix/covers
 readonly templatedir=$prefix/templates
@@ -41,7 +41,7 @@ List entries and templates.
 usage_ed() {
     cat <<'!'
 Edit the selected entry or template.  Only one entry may be edited per
-innvocation.
+invocation.
 
     ed [-t <template>] [-c <cover>] [entry]
         -t      Attempts to open the template with $EDITOR.
@@ -71,7 +71,7 @@ usage() {
 Usage: barkeep [-h] [mk | ls | ed | rm]
     Each mode has an -h flag which produces a summary of its help section.
 
-    -e      Prefered editor, uses $EDITOR if not set.
+    -e      Preferred editor, uses $EDITOR if not set.
 
 !
 

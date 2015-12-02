@@ -1,0 +1,52 @@
+#!/bin/bash
+# Title: title (PC year)
+
+# This example template for wine programs uses the virtual desktop feature.
+
+# This is an array as some programs may take arguments, e.g. foo.exe /S /t
+executable=()
+
+# The prefix is the same as the WINEPREFIX, it gets exported later on.
+prefix=$LOCALDIR/data/wine/foo
+
+# The path to executable's working directory, by default we assume the prefix
+# is the same, that is, a prefix of foo expands to C:\foo.  If this differs set
+# the path here otherwise leave it unset.
+path=
+
+# Title and resolution passed to wine's Virtual Desktop.
+title=no_spaces_here
+resolution=0000x0000
+
+# Export any environment variables, useful in some cases, e.g. for NVIDIA:
+export __GL_THREADED_OPTIMIZATIONS=1 
+
+# Or for mesa, to disable vsync:
+export vblank_mode=0
+
+# From here on, most of the rest is just script logic based on the above.
+export WINEPREFIX="$prefix"
+
+# Get the current resolution if not defined.
+if [[ ! $resolution ]]; then
+    # Exit after the first match.  FIXME This may not be correct.
+    awkprog='BEGIN { FS="[+ ]" } $2 == connected { print $4; exit }'
+    resolution=$(xrandr | awk "$awkprog")
+fi
+
+# Build the command based on above variables.
+wineopts=(explorer /desktop="$title","$resolution")
+
+# If we see arguments, pass them directly to wine instead, useful for running
+# winecfg, cmd or regedit on the prefix.  e.g. foo regedit will instead of
+# launching foo, open regedit using foo's prefix.
+if ((!$#)); then
+    executable=("$@")
+fi
+
+if cd "$prefix/drive_c/${path:-${prefix##*/}}"; then
+    # We use exec here to prevent the shell from sticking around, but if you
+    # wanted to actually do any clean up which is needed for some games,
+    # remove the call to exec and do clean up afterwards.
+    exec wine "${wineopts[@]}" "${executable[@]}"
+fi
