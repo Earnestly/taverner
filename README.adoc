@@ -31,7 +31,7 @@ these entries a bit more convenient.
 make PREFIX="$HOME/local" install
 
 # Optionally you can add your launchers to PATH.
-PATH=$PATH:${LOCALDIR-$HOME/local/}/data/taverner/bin
+export PATH="$PATH:${LOCALDIR-$HOME/local}/data/taverner/bin"
 ----
 
 == What & How
@@ -95,8 +95,8 @@ pc
 ----
 ----
 % barkeep mk wipeout_pulse -t psp -c ~/wipeout_pulse_cover.jpg
-‘/home/earnest/wipeout_pulse_cover.jpg’ -> ‘/home/earnest/local/data/taverner/covers/wipeout_pulse’
-‘/home/earnest/local/data/taverner/templates/psx’ -> ‘/home/earnest/local/data/taverner/bin/wipeout_pulse’
+‘/home/earnest/wipeout_pure_cover.jpg’ -> ‘/home/earnest/local/data/taverner/covers/wipeout_pure’
+‘/home/earnest/local/data/taverner/templates/psp’ -> ‘/home/earnest/local/data/taverner/bin/wipeout_pure’
 ----
 
 At this point you'll get prompted with your `$EDITOR` to make any
@@ -126,7 +126,7 @@ After editing the template all that remains is to run `taverner`.
 I wanted to turn an old machine into a game box that could play various
 emulated games on the SNES, PSX, PSP and some older ones via WINE while
 unifying the UI. Many existing solutions were quite sophisticated,
-beautiful and complex graphical frontends, usually existing to serve a
+beautiful but complex graphical frontends, usually existing to serve a
 specific set of emulators.
 
 Since the machine I was planning to use is quite limited in terms of
@@ -156,9 +156,9 @@ letting me just add any necessary tweaks.
 :xdg: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
 :localdir: https://github.com/Earnestly/dotfiles/blob/master/README.adoc#general-layout
 
-The `barkeep` script can only read the Title if the launcher is text,
+The `barkeep` script can only read the `Title` if the launcher is text,
 this could be changed with a better design but for now it means all
-launchers must be text files if the Title is needed.
+launchers must be text files if the `Title` is needed.
 
 Taverner makes use of a personal convention called "LOCALDIR", it
 behaves like the `DESTDIR` convention from makefiles and supplants
