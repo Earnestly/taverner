@@ -5,9 +5,11 @@
 
 image::{scrot}[scrot]
 
+---
+
 toc::[]
 
----
+== Introduction
 
 Taverner is a small collection of shell scripts _(read: 2)_ designed
 to generate and maintain a bunch of game launchers (or anything else
@@ -118,20 +120,6 @@ Here the title is read and passed to dmenu, if `# Title:` isn't present,
 
 After editing the template all that remains is to run `taverner`.
 
-== Colophon
-:xdg: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
-:localdir: https://github.com/Earnestly/dotfiles/blob/master/README.adoc#general-layout
-
-The `barkeep` script can only read the Title if the launcher is text,
-this could be changed with a better design but for now it means all
-launchers must be text files if the Title is needed.
-
-Taverner makes use of a personal convention called "LOCALDIR", it
-behaves like the `DESTDIR` convention from makefiles and supplants
-the {xdg}[XDG Base Directory Specification]. Under LOCALDIR a
-familiar hierarchy to the FHS is found with a few changes. See my
-{localdir}[dotfiles] for information.
-
 == Why
 :cloudef: https://github.com/Cloudef
 
@@ -163,3 +151,17 @@ writing the launcher scripts and setting up the cover image along with
 other potential tweaks. This is where `barkeep` comes in, it exists
 simply to aid me in creating the launchers, copying over templates and
 letting me just add any necessary tweaks.
+
+== Colophon
+:xdg: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
+:localdir: https://github.com/Earnestly/dotfiles/blob/master/README.adoc#general-layout
+
+The `barkeep` script can only read the Title if the launcher is text,
+this could be changed with a better design but for now it means all
+launchers must be text files if the Title is needed.
+
+Taverner makes use of a personal convention called "LOCALDIR", it
+behaves like the `DESTDIR` convention from makefiles and supplants
+the {xdg}[XDG Base Directory Specification]. Under LOCALDIR a
+familiar hierarchy to the FHS is found with a few changes. See my
+{localdir}[dotfiles] for information.
