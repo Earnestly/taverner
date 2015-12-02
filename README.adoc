@@ -5,6 +5,8 @@
 
 image::{scrot}[scrot]
 
+toc::[]
+
 ---
 
 Taverner is a small collection of shell scripts _(read: 2)_ designed
