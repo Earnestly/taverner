@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# barkeep
-# Creates a game entry based on a template for use with `taverner`.
+# barkeep - create entries based on a template for use with taverner
 
 # Options
 shopt -s nullglob

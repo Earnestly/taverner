@@ -1,22 +1,19 @@
-#!/usr/bin/env bash
-# taverner
-# Generate a dmenu for games on various platforms with associated cover images
-# and launch them based on custom shell scripts tailored for their needs.
+#!/bin/bash
+# taverner - generate dmenu for launchers and display cover images
 
 shopt -s nullglob
 
 readonly argv0=taverner
-
-readonly prefix=${LOCALDIR:-$HOME/local}/data/taverner
+readonly prefix=${LOCALDIR:-$HOME/local}/data/$argv0
 readonly bindir=$prefix/bin
 readonly coverdir=$prefix/covers
 
 read -r font < "${LOCALDIR:-$HOME/local}"/cfg/dmenu/font
 readonly dmenu_opts=(
     -i -w -ia top-gapless -is 200x250
-    -fn "$font" -p 'Launch'
-    -nf '#a7a7a7' -nb '#1e1e1e'
-    -sf '#9b859d' -sb '#262626'
+    -fn "$font" -p 'LAUNCH'
+    -sf '#c0c5ce' -sb '#343d46'
+    -nf '#65737e' -nb '#343d46'
 )
 
 puts() {
