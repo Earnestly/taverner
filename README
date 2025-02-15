@@ -1,102 +1,110 @@
-Taverner <https://raw.github.com/Earnestly/taverner>
+taverner <https://raw.github.com/Earnestly/taverner>
 
 INTRODUCTION
 
-  Taverner is a small collection of shell scripts (read: 2) designed
+  taverner is a small collection of shell scripts (read: 2) designed
   to generate and maintain a bunch of game launchers (or anything else
-  really). It uses a modified {dmenu}[dmenu] for creating list of entries
-  along with a nice cover image and an accompanying tool to make creating
-  these entries a bit more convenient.
+  really). It uses a modified dmenu for creating list of entries along with a
+  nice cover image and an accompanying tool to make creating these entries a
+  bit more convenient.
 
   Screenshot: <https://raw.github.com/Earnestly/taverner/master/scrot.png>
 
 REQUIRES
 
-  - bash 4.2+
-  - graphicsmagick
+  - bash
+  - curl
+  - imagemagick
+  - awk (which supports \0 in printf)
   - dmenu-pango-imlib <https://github.com/Cloudef/dmenu-pango-imlib>
 
 INSTALL
 
-  I keep my local binaries in LOCALDIR/bin:
-
-    make PREFIX="$LOCALDIR" install
-
-  Optionally you can add the launch script's directory to PATH:
-
-    export PATH="$PATH:${LOCALDIR-$HOME/local}/data/taverner/bin"
+    make install
 
 WHAT & HOW
 
   Briefly, a typical session may look like this
 
     % barkeep -h
-    Usage: barkeep [-h] [mk | ls | ed | rm]
-        Each mode has an -h flag which produces a summary of its help section.
+    usage: barkeep [-h] [-e editor] mk [-h] [-c cover] [-t template] [-n title] entry
+           barkeep [-h] [-e editor] ed [-ht] [-c cover] [-n title] entry
+           barkeep [-h] [-e editor] ls [-ht0]
+           barkeep [-h] [-e editor] rm [-h] entry...
 
-        -e      Preferred editor, uses $EDITOR if not set.
+    options
+        -e editor  specify editor to use instead of EDITOR (default: vi)
 
-    Create a new menu entry.  Uses $EDITOR to complete the new entry.
+    examples
+        create an entry using the psx template called wipeout3 with emacs
+        as the editor:
 
-        mk [-c <cover>] -t <template> <entry>
-            -t      Select a template to base the new entry on.
-            -c      Path or url to a cover image.  (Note: This is destructive)
-            entry   The name for the new launcher script.
+            barkeep -e emacs mk -t psx -c ~/wipeout3.png -n 'Wipeout 3 (PSX 1999)' wipeout3
 
-    List entries and templates.
+        removes both wipeout3 and crash-bandicoot launchers along with their
+        metadata:
 
-        ls [-t]
-            -t      List all available templates.
+            barkeep rm wipeout3 crash-bandicoot
 
-            If no arguments given this will list all entries.
+    commands
 
-    Edit the selected entry or template.  Only one entry may be edited per
-    invocation.
+        usage: mk [-h] [-c cover] [-t template] [-n title] entry
 
-        ed [-t <template>] [-c <cover>] [entry]
-            -t      Attempts to open the template with $EDITOR.
-            -c      Replace the cover for entry, note that the entry is required
-                    for this operation.
-            entry   Attempts to open the entry with $EDITOR.
+        description
+            create a new menu entry
 
-        Issue: If -c is specified for an entry, it will both update the entries
-               cover image but also offer to edit the entry as well.
+        options
+            -h           this help menu
+            -t template  select a template to base the new entry on
+            -c cover     path or url to a cover image
+            -n title     media title to display
+            entry        the name for the new launcher script
 
-    Remove selected entries and corresponding covers.  If no argument given,
-    attempt to remove all entires.
+        usage: ls [-ht0]
 
-        rm [entry [entry]]
-            entry   The chosen entry to remove.
+        description
+            list entries and templates
 
-    Examples:
-        # Creates an entry using the psx template called wipeout_3 using emacs
-        # as the editor.
-        barkeep mk -e emacs -t psx -c ~/wipeout.png wipeout_3
+        options
+            -h  this help menu
+            -t  list templates instead of entries
+            -0  use NUL instead of a <newline> between items
 
-        # Removes both wipeout_3 and crash_bandicoot launchers along with any
-        # cover images if found.
-        barkeep rm wipeout_3 crash_bandicoot
+        usage: ed [-c cover] [-n title] entry
+               ed [-t] [-n title] entry
+               ed [-n title] entry
+
+        description
+            edit the selected entry
+
+        options
+            -c cover  path or url to cover for the entry
+            -n title  specify the title for the entry title
+            -t        assumes entry refers to a template
+            entry     attempts to open the entry with EDITOR (default: vi)
+
+        usage: rm [-h] entry...
+
+        description
+            remove selected entries and corresponding covers
+
+        options
+            -h      this help menu
+            entry   the chosen entry to remove
+
 
     % barkeep ls -t
     ppsspp
     wine
 
-    % barkeep mk wipeout_pulse -t ppsspp -c ~/wipeout_pulse_cover.jpg
-    ‘/home/earnest/wipeout_pure_cover.jpg’ -> ‘/home/earnest/local/data/taverner/covers/wipeout_pure’
-    ‘/home/earnest/local/data/taverner/templates/ppsspp’ -> ‘/home/earnest/local/data/taverner/bin/wipeout_pure’
+    % barkeep mk -t ppsspp -c ~/wipeout-pulse-cover.jpg -n 'Wipeout Pulse (PSP 2005)'  wipeout-pulse
 
-  At this point you'll get prompted with your editor to make any changes
+  At this point you'll be prompted with your editor to make any changes
   to the template such as specifying what to execute, and where the data
-  files are located. Here is an example template with places left for you
-  to fill in:
+  files are located. E.g.:
 
-    #!/bin/bash
-    # Title: Wipeout Pure (PSP 2005)
-
-    exec ppsspp --fullscreen "$LOCALDIR"/data/games/psp/wipeout_pure.iso
-
-  Here the title is read and passed to dmenu, if "# Title:" isn't present,
-  taverner will fallback on the file name of the launch script.
+    #!/bin/bash --
+    exec ppsspp --fullscreen "${XDG_DATA_HOME:-$HOME/.local/share}"/games/psp/wipeout_pure.iso
 
   After editing the template, run taverner.
 
@@ -130,19 +138,3 @@ WHY
   other potential tweaks. This is where `barkeep` comes in, it exists
   simply to aid me in creating the launchers, copying over templates and
   letting me just add any necessary tweaks.
-
-COLOPHON
-
-  The barkeep script can only read the Title if the launcher is text, this
-  could be changed with a better design but for now it means all launchers
-  must be text files if the Title is needed.
-
-  Taverner makes use of a personal convention called "LOCALDIR", it
-  behaves like the DESTDIR convention from makefiles and supplants the XDG
-  Base Directory Specification.
-
-  Under LOCALDIR a familiar hierarchy to the FHS is found with a few
-  changes.
-
-  See <https://github.com/Earnestly/dotfiles/blob/master/README> for some
-  more information.

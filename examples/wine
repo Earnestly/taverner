@@ -1,22 +1,22 @@
-#!/bin/bash
-# Title: title (PC year)
+#!/bin/bash --
 
-# This example template for wine programs uses the virtual desktop feature.
+# This wine template uses its virtual desktop feature.
 
-# This is a list as some programs may take arguments, for example: foo.exe /S
+# The command is an array as some programs may take arguments, e.g.: foo.exe /S
 command=()
 
-# The prefix is the same as the WINEPREFIX, it gets exported later on.
-prefix=$LOCALDIR/data/wine/foo
+# The prefix is the same as the WINEPREFIX, it will be exported.
+prefix=${XDG_DATA_HOME:-$HOME/.local/share}/wine/foo
 
-# The path to executable's working directory, by default we assume the prefix
-# is the same, e.g. a prefix of foo expands to C:\foo.  If instead the command
-# is under a different directory alter this variable, e.g. path=foo/x86
+# The path to working directory for the executable.
+# By default assume the prefix is the same, e.g. a prefix of 'foo' becomes to
+# 'C:\foo'. If instead the command is under a different directory alter this
+# variable, e.g. path=foo/x86 (becoming 'C:\foo\x86'):
 path=
 
-# Title and resolution passed to wine's Virtual Desktop.
-title=no_spaces_here
-resolution=0000x0000
+# Title and resolution passed to wine's Virtual Desktop:
+title=no-spaces-allowed-here
+resolution=1920x1080
 
 # Export any environment variables, useful in some cases, e.g. for NVIDIA:
 export __GL_THREADED_OPTIMIZATIONS=1
@@ -24,30 +24,24 @@ export __GL_THREADED_OPTIMIZATIONS=1
 # Or for mesa, to disable vsync:
 export vblank_mode=0
 
+# Enable threaded gl dispatch for mesa:
+export mesa_glthread=true
+
 # From here on the rest is just script logic based on the above information.
 export WINEPREFIX=$prefix
 
-# Get the current resolution if not defined.
-if [[ ! $resolution ]]; then
-    # Exit after the first match.  XXX This may not be correct.
-    awkprog='BEGIN { FS="[+ ]" } $2 == connected { print $4; exit }'
-    resolution=$(xrandr | awk "$awkprog")
-fi
-
-# Normally no arguments are given to launchers but we can take advantage of the
-# prior work to access other wine commands in the same WINEPREFIX/environment.
-# For example: './foo winecfg' will start winecfg in the correct WINEPREFIX as
-# defined above.
-if ((!$#)); then
+# Normally no arguments are given to launchers. However it is possible to
+# directly invoke them with arguments which can be useful.
+#
+# For example './foo/run winecfg' with this template can be used to start
+# winecfg in the correct WINEPREFIX instead of running the user defined
+# command. A small convenience to avoid manually specifying WINEPREFIX.
+if [[ $# -gt 0 ]]; then
     command=("$@")
 fi
 
-# Build the command based on above variables.
 wineopts=(explorer /desktop="$title","$resolution")
 
-if cd "$prefix"/drive_c/"${path:-${prefix##*/}}"; then
-    # We use exec here to prevent the shell from sticking around, but if you
-    # wanted to actually do any clean up which is needed for some software,
-    # remove the call to exec and do clean up afterwards.
+if CDPATH='' cd -- "$prefix"/drive_c/"${path:-${prefix##*/}}"; then
     exec wine "${wineopts[@]}" "${command[@]}"
 fi

@@ -1,32 +1,28 @@
-#!/bin/bash
-# Title: title (SYSTEM year)
+#!/bin/bash --
 
 # This general RetroArch template assumes roms are stored in
-# LOCALDIR/data/game/<system> and the cores in LOCALDIR/data/retroarch/core.
-
-# Change the SYSTEM in the title to something more appropriate such as PSX,
-# GBA, MAME, NEO and so on.
-
+# XDG_DATA_HOME/game/<system> and the cores in XDG_DATA_HOME/retroarch/core.
 rom=
 
 # Append any configurations here, such as different controller layouts, filter
 # options or otherwise. The configuration file is assumed to be in
-# LOCALDIR/cfg/retroarch.  Leave blank if unwanted.
+# XDG_CONFIG_HOME/retroarch. Leave blank if unwanted.
 append=
 
-prefix=$LOCALDIR/data/retroarch
-
 # Path to the games for a certain system, for example PSX:
-rompath=$LOCALDIR/data/game/psx
+romdir=${XDG_DATA_HOME:-$HOME/.local/share}/game/psx
+
+# Location of RetroArch cores:
+coredir=${XDG_DATA_HOME:-$HOME/.local/share}/retroarch/core
 
 # Prefered core associated with the system:
-emulator=$prefix/core/pcsx_rearmed_libretro.so
+emulator=$coredir/pcsx_rearmed_libretro.so
 
 # For mesa, if needed, disable vsync:
 export vblank_mode=0
 
 if [[ $append ]]; then
-    options=(--appendconfig "$LOCALDIR/cfg/retroarch/$append")
+    options=(--appendconfig "${XDG_CONFIG_HOME:-$HOME/.config}"/retroarch/"$append")
 fi
 
-exec retroarch "${options[@]}" -L "$emulator" "$rompath/$rom"
+exec retroarch "${options[@]}" -L "$emulator" "$romdir"/"$rom"

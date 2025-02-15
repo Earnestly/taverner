@@ -1,7 +1,7 @@
-#!/bin/bash
-# Title: title (PSP year)
+#!/bin/bash --
+
+path=${XDG_DATA_HOME:-$HOME/.local/share}/games/psp
 
 rom=
-path=$LOCALDIR/data/games/psp
 
-exec ppsspp --fullscreen "$path/$rom"
+exec ppsspp --fullscreen "$path"/"$rom"

@@ -1,131 +1,60 @@
-#!/bin/bash
+#!/bin/bash --
 # taverner - generate dmenu for launchers and display cover images
+# requires dmenu-pango-imlib
 
-shopt -s nullglob
+warn() {
+    printf "%s: $1" taverner "${@:2}" >&2
+}
 
-readonly argv0=taverner
-readonly prefix=${LOCALDIR:-$HOME/local}/data/$argv0
-readonly bindir=$prefix/bin
-readonly coverdir=$prefix/covers
+datadir=${XDG_DATA_HOME:-$HOME/.local/share}/taverner
 
-read -r font < "${LOCALDIR:-$HOME/local}"/cfg/dmenu/font
-readonly dmenu_opts=(
+bindir=$datadir/bin
+
+read -r font < "${XDG_CONFIG_HOME:-$HOME/.config}"/menu/font
+
+dmenu_opts=(
     -i -w -ia top-gapless -is 200x250
     -fn "$font" -p 'LAUNCH'
     -sf '#c0c5ce' -sb '#343d46'
     -nf '#65737e' -nb '#343d46'
 )
 
-puts() {
-    printf -- "$1\n" "${@:2}"
+dmenu() {
+    awk -F '\t' 'NF {print $2}'
 }
 
-err() {
-    puts "$argv0: $1" "${@:2}" >&2
-}
-
-title_in() {
-    local title
-
-    while read -r title; do
-        if [[ $title =~ '# Title: '?(.*) ]]; then
-            puts '%s' "${BASH_REMATCH[1]}"
-            break
-        fi
-    done
-}
-
-generate_entry_data() {
-    #global bindir coverdir
-    local file filename title cover
-
-    for file in "$bindir"/*; do
-        if [[ -e $file ]]; then
-            title=$(title_in < "$file")
-        fi
-
-        filename=${file##*/}
-
-        # Use the filename if no title could be found.
-        if [[ ! $title ]]; then
-            title=$filename
-        fi
-
-        # If a matching cover image isn't found use a placeholder instead.
-        if [[ -e $coverdir/$filename ]]; then
-            cover=$coverdir/$filename
-        else
-            cover=$coverdir/placeholder
-        fi
-
-        puts '%s' "$title"
-        puts '%s' "$file"
-        puts '%s' "$cover"
-    done
-}
-
-create_sorted_menu() {
-    # global titles covers
-    local key
-
-    for key in "${!titles[@]}"; do
-        puts 'IMG:%s\t%s' "${covers[$key]}" "$key"
-    done | sort
-}
-
-get_user_picks() {
-    create_sorted_menu | dmenu "${dmenu_opts[@]}"
-}
-
-launch() {
-    local err
-    local entry=$1
-
-    if ! err=$(command -- "$entry"); then
-        err '%s' "${err:-$entry}"
-    fi
-}
-
-populate_arrays() {
-    # global titles covers entry
-
-    # Parse the list into two arrays.  We keep a consistent key so we can
-    # access the correct corresonding information for both lookups.
-    while {
-        read -r title
-        read -r entry
-        read -r cover
-    } do
-        titles["$title"]="$entry"
-        covers["$title"]="$cover"
-    done
-}
-
-process_results() {
-    # global titles
-    local pick entry
-
-    while read -r pick; do
-        if [[ ${titles[$pick]} ]]; then
-            entry="${titles[$pick]}"
-        else
-            err '%s: Cannot find associated launcher' "$pick"
-            exit 1
-        fi
-
-        launch "$entry" &
-    done
-}
+mkdir -p -- "$bindir" || exit
 
 declare -A titles
 declare -A covers
 
-mkdir -p "$bindir" "$coverdir"
+shopt -s nullglob
 
-populate_arrays < <(generate_entry_data)
+for dir in "$bindir"/*; do
+    if [[ -d $dir ]]; then
+        title=$dir/title
+        cover=$dir/cover
 
-results=$(get_user_picks)
+        read -r title < "$dir"/title
 
-if [[ $results ]]; then
-    process_results <<< "$results"
-fi
+        titles[$title]=$dir/run
+        covers[$title]=$cover
+    fi
+done
+
+for title in "${!titles[@]}"; do
+    printf 'IMG:%s\t%s' "${covers[$title]}" "$title"
+done \
+| sort \
+| dmenu "${dmenu_opts[@]}" \
+| while read -r pick; do
+    if [[ $pick ]]; then
+        entry=${titles[$pick]}
+
+        if [[ -x $entry ]]; then
+            "$entry" &
+        else
+            warn '%s: cannot find associated launcher\n' "$pick"
+        fi
+    fi
+done
