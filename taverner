@@ -1,60 +1,375 @@
 #!/bin/bash --
-# taverner - generate dmenu for launchers and display cover images
-# requires dmenu-pango-imlib
+# taverner - manage entries for displaying menus with related images
+# requires imagemagick curl gawk sort(-z)
+
+shopt -s nullglob
+
+usage() {
+    cat <<'!'
+usage: taverner [-h] [-e editor] menu [-h] [--] [arguments]...
+       taverner [-h] [-e editor] add [-h] [-c cover] [-t template] [-n title] entry
+       taverner [-h] [-e editor] edit [-ht] [-c cover] [-n title] entry
+       taverner [-h] [-e editor] ls [-ht0]
+       taverner [-h] [-e editor] rm [-h] entry...
+
+options
+    -e editor  specify editor to use instead of EDITOR (default: vi)
+
+examples
+    create an entry called wipeout3 with a psx template using emacs as the
+    editor:
+
+        taverner -e emacs add -t psx -c ~/wipeout-3.jpg -n 'Wipeout 3 (PSX 1999)' wipeout-3
+
+    removes both wipeout-3 and crash-bandicoot launchers along with their
+    metadata (cover and title):
+
+        taverner rm wipeout-3 crash-bandicoot
+
+!
+}
 
 warn() {
-    printf "%s: $1" taverner "${@:2}" >&2
+    printf "%s: warning: $1" taverner "${@:2}" >&2
+}
+
+error() {
+    printf "%s: error: $1" taverner "${@:2}" >&2
+    exit 1
+}
+
+thumbnail() {
+    if [[ $2 =~ [https?|f]tp ]]; then
+        if COLUMNS=40 curl --remove-on-error -#Lgfo "$1"/cover.dl -- "$2"; then
+            set -- "$1" "$1"/cover.dl
+        else
+            warn '%s: failed to download cover\n' "$2"
+        fi
+    fi
+
+    if [[ -f $2 ]]; then
+        magick -define filename:literal=true "$2" -thumbnail '200x250!' "$2".tmp || exit
+
+        mv -f -- "$2".tmp "$1"/cover
+        rm -f -- "$1"/cover.dl
+    else
+        error '%s: unable to find cover\n' "$2"
+    fi
+}
+
+menu_usage() {
+    cat <<'!'
+usage: menu [-h] [--] [arguments]...
+
+description
+    generate a menu, provide a prompt and execute selections
+
+options
+    -h         this help menu
+    arguments  the arguments specified after -- are passed to each selected
+               entry
+
+!
+}
+
+menu_cmd() {
+    local entry title dir font
+    declare -A entries
+
+    while getopts :h opt; do
+        case $opt in
+        h) menu_usage; exit ;;
+        *) menu_usage >&2; exit 1
+        esac
+    done
+
+    shift "$((OPTIND-1))"
+
+    # N.B. To avoid repeated traversal and file reads, retain the initial in a
+    #      menu using a custom format only to be updated when the bindir is
+    #      updated. The format is: title "/" directory "\0"
+    if [[ $datadir/menu -ot "$bindir" ]]; then
+        for dir in "$bindir"/*/; do
+            read -r title < "$dir"/title
+            printf '%s/%s\0' "$title" "$dir"
+        done | sort -zt '/' -k 1,1 > "$datadir"/menu
+    fi
+
+    while IFS=/ read -rd '' title dir; do
+        if [[ ${entries[$title]} ]]; then
+            warn '%s: %s and %s have the same title, skipping\n' "$title" "${entries[$title]##*/}" "${dir##*/}"
+        else
+            entries[$title]=$dir
+        fi
+
+    done < "$datadir"/menu
+
+    for title in "${!entries[@]}"; do
+        printf 'IMG:%s\t%s\n' "${entries[$title]}"/cover "$title"
+
+        # rofi
+        # printf '%s\0icon\037%s\n' "$title" "${entries[$title]}"/cover
+    done \
+    | dmenu -i -w -ia top-gapless -is 200x250 -p LAUNCH -sf '#c0c5ce' -sb '#343d46' -nf '#65737e' -nb '#343d46' \
+    | while read -r title; do
+        if [[ $title ]]; then
+            entry=${entries[$title]}/run
+
+            if [[ -x $entry ]]; then
+                "$entry" "$@" &
+            elif [[ -f $entry ]]; then
+                warn '%s: not executable\n' "$title"
+            else
+                warn '%s: no associated file\n' "$title"
+            fi
+        fi
+    done
+}
+
+add_usage() {
+    cat <<'!'
+usage: add [-h] [-c cover] [-t template] [-n title] entry
+
+description
+    create a new menu entry
+
+options
+    -h           this help menu
+    -t template  select a template to base the new entry on
+    -c cover     path or url to a cover image
+    -n title     media title to display
+    entry        the name for the new launcher script
+
+!
+}
+
+add_cmd() {
+    local opt entry cover template
+
+    while getopts :c:t:e:n:h opt; do
+        case $opt in
+        c) cover=$OPTARG ;;
+        t) template=$OPTARG ;;
+        n) title=$OPTARG ;;
+        h) mk_usage; exit ;;
+        *) mk_usage >&2; exit 1
+        esac
+    done
+
+    shift "$((OPTIND-1))"
+
+    title=${title:-$1}
+
+    case $1 in
+    '') error 'entry name required\n' ;;
+    */*) error '%s: <slash> (/) not allowed in entry name\n' "$1" ;;
+    *) entry=$bindir/$1
+    esac
+
+    if [[ -e $entry ]]; then
+        error '%s: entry exists\n' "$entry"
+    fi
+
+    if [[ $template && ! -f $template ]]; then
+        error '%s: no such template\n' "$template"
+    fi
+
+    mkdir -p -- "$entry"
+
+    printf '%s\n' "$title" > "$entry"/title
+
+    if [[ $cover ]]; then
+        thumbnail "$entry" "$cover"
+    fi
+
+    if [[ $template ]]; then
+        cp -f -- "$templatedir"/"$template" "$entry"/run
+    else
+        touch -- "$entry"/run
+    fi
+
+    $editor "$entry"/run
+    chmod -c -- +x "$entry"/run
+}
+
+edit_usage() {
+    cat <<'!'
+usage: edit [-c cover] [-n title] entry
+       edit [-t] [-n title] entry
+       edit [-n title] entry
+
+description
+    edit the selected entry
+
+options
+    -c cover  path or url to cover for the entry
+    -n title  specify the title for the entry title
+    -t        assumes entry refers to a template
+    entry     attempts to open the entry with EDITOR (default: vi)
+
+!
+}
+
+edit_cmd() {
+    local entry cover template
+
+    while getopts :c:n:ht opt; do
+        case $opt in
+        t) template=1 ;;
+        c) cover=$OPTARG ;;
+        n) title=$OPTARG ;;
+        h) ed_usage; exit ;;
+        *) ed_usage >&2; exit 1
+        esac
+    done
+
+    shift "$((OPTIND-1))"
+
+    if [[ $template ]]; then
+        entry=$templatedir/$1
+    else
+        entry=$bindir/$1
+    fi
+
+    if [[ ! -e "$entry" ]]; then
+        error '%s: no such entry\n' "$1"
+    fi
+
+    if [[ $template ]]; then
+        $editor "$entry"
+    else
+        if [[ $title ]]; then
+            printf '%s\n' "$title" > "$entry"/title
+        fi
+
+        if [[ $cover ]]; then
+            thumbnail "$entry" "$cover"
+        else
+            $editor "$entry"/run
+        fi
+    fi
+
+    touch -- "$bindir"
+}
+
+ls_usage() {
+    cat <<!
+usage: ls [-ht0]
+
+description
+    list entries and templates
+
+options
+    -h  this help menu
+    -t  list templates instead of entries
+    -0  use NUL instead of a <newline> between items
+
+!
+}
+
+ls_cmd() {
+    local opt dir=$bindir fmt='%s\n'
+
+    while getopts :th0 opt; do
+        case $opt in
+        t) dir=$templatedir ;;
+        0) fmt='%s\0' ;;
+        h) ls_usage; exit ;;
+        *) ls_usage >&2; exit 1 ;;
+        esac
+    done
+
+    set -- "$dir"/*
+
+    if [[ $# -gt 0 ]]; then
+        # shellcheck disable=SC2059
+        printf "$fmt" "${@##*/}"
+    fi
+}
+
+rm_usage() {
+    cat <<!
+usage: rm [-h] entry...
+
+description
+    remove selected entries and corresponding covers
+
+options
+    -h      this help menu
+    entry   the chosen entry to remove
+
+!
+}
+
+rm_cmd() {
+    local opt entry
+
+    while getopts :h opt; do
+        case $opt in
+        h) rm_usage; exit ;;
+        *) rm_usage >&2; exit 1
+        esac
+    done
+
+    shift "$((OPTIND-1))"
+
+    if [[ $# -eq 0 ]]; then
+        error 'no entry provided\n'
+    fi
+
+    for entry do
+        if [[ -e "$bindir"/"$entry" ]]; then
+            set -- "$@" "$bindir"/"$entry"
+        else
+            warn '%s: no such entry\n' "$entry"
+        fi
+
+        shift
+    done
+
+    # N.B. Avoid ARG_MAX via xargs while using awk to prune duplicates.
+    gawk 'BEGIN {for(i=2;i<ARGC;++i) if(!s[ARGV[i]]++) printf "%s\0", ARGV[i]}' -- "$@" \
+    | xargs -r0 rm -rf --
 }
 
 datadir=${XDG_DATA_HOME:-$HOME/.local/share}/taverner
 
 bindir=$datadir/bin
+templatedir=$datadir/templates
 
-read -r font < "${XDG_CONFIG_HOME:-$HOME/.config}"/menu/font
+editor=${EDITOR:-vi}
 
-dmenu_opts=(
-    -i -w -ia top-gapless -is 200x250
-    -fn "$font" -p 'LAUNCH'
-    -sf '#c0c5ce' -sb '#343d46'
-    -nf '#65737e' -nb '#343d46'
-)
+while getopts :he: opt; do
+    case $opt in
+    e)
+        editor=$OPTARG
+    ;;
+    h)
+        usage
 
-dmenu() {
-    awk -F '\t' 'NF {print $2}'
-}
+        printf 'sub-commands\n'
 
-mkdir -p -- "$bindir" || exit
+        for cmd in menu add edit ls rm; do
+            printf '%s\n' "$cmd"
+            "$cmd"_usage | pr -to 4
+        done | pr -to 4
 
-declare -A titles
-declare -A covers
-
-shopt -s nullglob
-
-for dir in "$bindir"/*; do
-    if [[ -d $dir ]]; then
-        title=$dir/title
-        cover=$dir/cover
-
-        read -r title < "$dir"/title
-
-        titles[$title]=$dir/run
-        covers[$title]=$cover
-    fi
+        exit
+    ;;
+    *)
+        usage >&2
+        exit 1
+    esac
 done
 
-for title in "${!titles[@]}"; do
-    printf 'IMG:%s\t%s' "${covers[$title]}" "$title"
-done \
-| sort \
-| dmenu "${dmenu_opts[@]}" \
-| while read -r pick; do
-    if [[ $pick ]]; then
-        entry=${titles[$pick]}
+shift "$((OPTIND-1))"
 
-        if [[ -x $entry ]]; then
-            "$entry" &
-        else
-            warn '%s: cannot find associated launcher\n' "$pick"
-        fi
-    fi
-done
+mkdir -p -- "$bindir" "$templatedir" || exit
+
+# N.B. Reset OPTIND for subsequent calls to getopts.
+OPTIND=1
+
+case $1 in
+menu|add|edit|ls|rm) cmd=$1; shift; "$cmd"_cmd "$@" ;;
+*) usage; exit 1
+esac
