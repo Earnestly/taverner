@@ -1,21 +1,25 @@
 #!/bin/bash --
 
-# This wine template uses its virtual desktop feature.
+# This template uses wine's virtual desktop.
 
-# The command is an array as some programs may take arguments, e.g.: foo.exe /S
-command=()
+# The command is an array as some programs may take arguments, e.g. foo.exe /S
+cmd=()
 
-# The prefix is the same as the WINEPREFIX, it will be exported.
-prefix=${XDG_DATA_HOME:-$HOME/.local/share}/wine/foo
+WINEPREFIX=${XDG_DATA_HOME:-$HOME/.local/share}/wine/foo
 
 # The path to working directory for the executable.
-# By default assume the prefix is the same, e.g. a prefix of 'foo' becomes to
-# 'C:\foo'. If instead the command is under a different directory alter this
-# variable, e.g. path=foo/x86 (becoming 'C:\foo\x86'):
+#
+# N.B. By default the template assumes the basename of the WINEPREFIX is the
+#      same as the path under C:\ to the executable.
+#
+#      e.g. a WINEPREFIX of '.../wine/foo' becomes 'C:\foo'.
+#
+#      If instead the executable is under a different directory alter this
+#      variable, e.g. path=foo/x86 results in 'C:\foo\x86'.
 path=
 
 # Title and resolution passed to wine's Virtual Desktop:
-title=no-spaces-allowed-here
+title=window-title
 resolution=1920x1080
 
 # Export any environment variables, useful in some cases, e.g. for NVIDIA:
@@ -28,7 +32,7 @@ export vblank_mode=0
 export mesa_glthread=true
 
 # From here on the rest is just script logic based on the above information.
-export WINEPREFIX=$prefix
+export WINEPREFIX
 
 # Normally no arguments are given to launchers. However it is possible to
 # directly invoke them with arguments which can be useful.
@@ -37,11 +41,11 @@ export WINEPREFIX=$prefix
 # winecfg in the correct WINEPREFIX instead of running the user defined
 # command. A small convenience to avoid manually specifying WINEPREFIX.
 if [[ $# -gt 0 ]]; then
-    command=("$@")
+    cmd=("$@")
 fi
 
 wineopts=(explorer /desktop="$title","$resolution")
 
-if CDPATH='' cd -- "$prefix"/drive_c/"${path:-${prefix##*/}}"; then
-    exec wine "${wineopts[@]}" "${command[@]}"
+if CDPATH='' cd -- "$WINEPREFIX"/drive_c/"${path:-${WINEPREFIX##*/}}"; then
+    exec wine explorer /desktop="${title// /-}","$resolution" "${cmd[@]}"
 fi
