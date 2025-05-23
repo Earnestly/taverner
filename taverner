@@ -85,23 +85,22 @@ menu_cmd() {
 
     shift "$((OPTIND-1))"
 
-    # N.B. To avoid repeated traversal and file reads, retain the initial in a
-    #      menu using a custom format only to be updated when the bindir is
-    #      updated. The format is: title "/" directory "\0"
+    # N.B. To avoid repeated traversal and file reads cache the entries in a
+    #      custom format which is recreated when the bindir is updated.
+    #      The format is: title "\n" directory "\0"
     if [[ $datadir/menu -ot "$bindir" ]]; then
         for dir in "$bindir"/*/; do
             read -r title < "$dir"/title
-            printf '%s/%s\0' "$title" "$dir"
+            printf '%s\n%s\0' "$title" "$dir"
         done | sort -zt '/' -k 1,1 > "$datadir"/menu
     fi
 
-    while IFS=/ read -rd '' title dir; do
+    while IFS=$'\n' read -rd '' title dir; do
         if [[ ${entries[$title]} ]]; then
             warn '%s: %s and %s have the same title, skipping\n' "$title" "${entries[$title]##*/}" "${dir##*/}"
         else
             entries[$title]=$dir
         fi
-
     done < "$datadir"/menu
 
     for title in "${!entries[@]}"; do
@@ -328,7 +327,12 @@ rm_cmd() {
     done
 
     # N.B. Avoid ARG_MAX via xargs while using awk to prune duplicates.
-    gawk 'BEGIN {for(i=2;i<ARGC;++i) if(!s[ARGV[i]]++) printf "%s\0", ARGV[i]}' -- "$@" \
+    gawk '
+        BEGIN {
+            for(i=2; i<ARGC; ++i)
+                if(!s[ARGV[i]]++)
+                    printf "%s\0", ARGV[i]
+        }' -- "$@" \
     | xargs -r0 rm -rf --
 }
 
