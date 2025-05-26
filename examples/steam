@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Run a Steam game using its appID.
+
+appid=
+
+steam steam://rungameid/"$appid"
