@@ -217,8 +217,8 @@ edit_cmd() {
         t) template=1 ;;
         c) cover=$OPTARG ;;
         n) title=$OPTARG ;;
-        h) ed_usage; exit ;;
-        *) ed_usage >&2; exit 1
+        h) edit_usage; exit ;;
+        *) edit_usage >&2; exit 1
         esac
     done
 
