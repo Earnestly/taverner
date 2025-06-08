@@ -150,8 +150,8 @@ add_cmd() {
         c) cover=$OPTARG ;;
         t) template=$OPTARG ;;
         n) title=$OPTARG ;;
-        h) mk_usage; exit ;;
-        *) mk_usage >&2; exit 1
+        h) add_usage; exit ;;
+        *) add_usage >&2; exit 1
         esac
     done
 
