@@ -6,7 +6,7 @@ shopt -s nullglob
 
 usage() {
     cat <<'!'
-usage: taverner [-h] [-e editor] menu [-h] [--] [arguments]...
+usage: taverner [-h] [-e editor] menu [-h] [-f fmt] [-c cmd] [-a arg]... [--] [arguments]...
        taverner [-h] [-e editor] add [-h] [-c cover] [-t template] [-n title] entry
        taverner [-h] [-e editor] edit [-ht] [-c cover] [-n title] entry
        taverner [-h] [-e editor] ls [-ht0]
@@ -25,6 +25,14 @@ examples
     metadata (cover and title):
 
         taverner rm wipeout-3 crash-bandicoot
+
+    display the menu using standard dmenu in list mode:
+
+        taverner menu -f '%t\n' -c dmenu -a -l -a 20
+
+    display the menu with rofi using its icon protocol:
+
+        taverner menu -f '%t\0icon\037%c\n' -c rofi -a -dmenu -a -show-icons -a -theme-str -a 'element-icon{size:5em;}window{height:50%;}'
 
 !
 }
@@ -59,26 +67,36 @@ thumbnail() {
 
 menu_usage() {
     cat <<'!'
-usage: menu [-h] [--] [arguments]...
+usage: menu [-h] [-f fmt] [-c cmd] [-a arg]... [--] [arguments]...
 
 description
     generate a menu, provide a prompt and execute selections
 
 options
     -h         this help menu
+    -f         printf-like formatter using placeholders %t as title and %c as cover (default: IMG:%c\t%t\n)
+    -c cmd     menu command to use instead of dmenu (default: dmenu -i -w -ia top-gapless -is 200x250 -p LAUNCH)
+    -a arg     each argument given to the menu command, can be repeated
     arguments  the arguments specified after -- are passed to each selected
                entry
+
+notes
+    the cmd used must return the title terminated with a <newline>.
 
 !
 }
 
 menu_cmd() {
-    local entry title dir font
-    declare -A entries
+    local entry title dir cmd fmt='IMG:%c\t%t\n'
+    local -a args menucmd=(dmenu -i -w -ia top-gapless -is 200x250 -p LAUNCH)
+    local -A entries
 
-    while getopts :h opt; do
+    while getopts :hc:a:f: opt; do
         case $opt in
         h) menu_usage; exit ;;
+        c) cmd=$OPTARG ;;
+        a) args+=("$OPTARG") ;;
+        f) fmt=$OPTARG ;;
         *) menu_usage >&2; exit 1
         esac
     done
@@ -103,13 +121,38 @@ menu_cmd() {
         fi
     done < "$datadir"/menu
 
-    for title in "${!entries[@]}"; do
-        printf 'IMG:%s\t%s\n' "${entries[$title]}"/cover "$title"
+    interpolate() {
+        local i cur peek out len=${#1} title=${2//[%\\]/&&} cover=${3//[%\\]/&&}
 
-        # rofi
-        # printf '%s\0icon\037%s\n' "$title" "${entries[$title]}"/cover
+        # XXX This might eventually be too slow, however format strings tend to
+        #     be very short.
+        for (( i=0; i<len; ++i )); do
+            cur=${1:i:1}
+            peek=${1:i+1:1}
+
+            case $cur$peek in
+            %t) cur=$title; (( ++i )) ;;
+            %c) cur=$cover; (( ++i )) ;;
+            %%) cur=%%; (( ++i ))
+            esac
+
+            out+=$cur
+        done
+
+        # N.B. printf formatter is needed to handle the printing of NUL and
+        #      used for any other c-style escapes.
+        # shellcheck disable=SC2059
+        printf "$out"
+    }
+
+    if [[ $cmd ]]; then
+        menucmd=("$cmd" "${args[@]}")
+    fi
+
+    for title in "${!entries[@]}"; do
+        interpolate "$fmt" "$title" "${entries[$title]}"/cover
     done \
-    | dmenu -i -w -ia top-gapless -is 200x250 -p LAUNCH -sf '#c0c5ce' -sb '#343d46' -nf '#65737e' -nb '#343d46' \
+    | "${menucmd[@]}" \
     | while read -r title; do
         if [[ $title ]]; then
             entry=${entries[$title]}/run
